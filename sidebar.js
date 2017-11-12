@@ -1,144 +1,170 @@
-document.addEventListener("DOMContentLoaded", Initialize(), false);
+// Copyright (c) 2017 kroppy. All rights reserved.
+// Use of this source code is governed by a Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) license
+// that can be found at https://creativecommons.org/licenses/by-nc-nd/4.0/
 
-function Initialize(){
-	if (bg.hold){
-		setTimeout(function(){ Initialize(); },500);
-		chrome.runtime.sendMessage({command: "background_start"});
+document.addEventListener("DOMContentLoaded", Run(), false);
+
+
+
+function Loadi18n() {
+	// toolbar labels
+	$(".button").each(function() {
+		$(this).attr("title", chrome.i18n.getMessage(this.id));
+	});
+
+	// menu labels
+	$(".menu_item").each(function() {
+		$(this).text(chrome.i18n.getMessage(this.id));
+	});
+	
+	// edit group dialog labels
+	$(".group_edit_button").each(function() {
+		$(this)[0].textContent = chrome.i18n.getMessage(this.id);
+	});
+}
+function RestorePinListRowSettings() {
+	if (opt.pin_list_multi_row) {
+		$("#pin_list").css({"white-space": "normal", "overflow-x": "hidden"});
 	} else {
-
-		var theme = {
-			"ToolbarShow": false,
-			"ScrollbarPinList": 4,
-			"ScrollbarTabList": 16
-		};
-
-		if (localStorage.getItem("current_theme") != null && localStorage["theme"+localStorage["current_theme"]] != null){
-			theme = JSON.parse(localStorage["theme"+localStorage["current_theme"]]);
-			
-			$("#toolbar").html(theme.toolbar);
-			
-			var css_variables = "";
-			for (var css_variable in theme.ColorsSet){
-				css_variables = css_variables + "--" + css_variable + ":" + theme.ColorsSet[css_variable] + ";";
-			}
-			for (var css_variable in theme.TabsSizeSet){
-				css_variables = css_variables + "--" + css_variable + ":" + theme.TabsSizeSet[css_variable] + ";";
-			}
-			
-			document.styleSheets[0].insertRule("body { "+css_variables+" }", 0);
-		}
-
-		if (navigator.userAgent.match("Firefox") === null){
-			document.styleSheets[0].insertRule("::-webkit-scrollbar { width:"+theme.ScrollbarTabList+"px; height:"+theme.ScrollbarPinList+"px; }", 0);
-		} else {
-			// I have no idea what is going on in latest build, but why top position for various things is different in firefox?????
-			if (theme.TabsSizeSetNumber > 1){
-				document.styleSheets[1].insertRule(".tab_header>.tab_title { margin-top: -1.5px; }", document.styleSheets[1].cssRules.length);
-			}
-			// document.styleSheets[1].insertRule("#toolbar_main { top: 1px; height: 25px; }", document.styleSheets[1].cssRules.length);
-			// document.styleSheets[1].insertRule(".button_img { position: relative; top: -1px; left: -1px; }", document.styleSheets[1].cssRules.length);
-		}
-			
-		chrome.tabs.query({currentWindow: true}, function(tabs){
-			CurrentWindowId = tabs[0].windowId;
-
-
-			if (bg.opt.pin_list_multi_row){
-				$("#pin_list").css({"white-space": "normal", "overflow-x": "hidden"});
-			}
-
-
-			if (theme.ToolbarShow == true){
-				if (bg.opt_toolbar.filter_type == "url"){
-					$("#button_filter_type").addClass("url");
-				} else {
-					$("#button_filter_type").addClass("title");
-				}
-				$(".button").each(function(){
-					$(this).attr("title", chrome.i18n.getMessage(this.id));
-				});
-				$("#filter_box").attr("placeholder", bg.caption_searchbox);
-				$("#filter_box").css({"opacity": 1});
-				
-				$(".on").removeClass("on");
-				$("#toolbar_tools, #toolbar_search").removeClass("hidden");
-				
-				if (bg.opt_toolbar.active_toolbar_tool == ""){
-					$("#toolbar_tools, #toolbar_search").addClass("hidden");
-				}
-				if (bg.opt_toolbar.active_toolbar_tool == "tools" && $("#button_tools").length != 0){
-					$("#toolbar_search").addClass("hidden");
-					$("#button_tools").addClass("on");
-				}
-				if (bg.opt_toolbar.active_toolbar_tool == "search" && $("#button_search").length != 0){
-					$("#toolbar_tools").addClass("hidden");
-					$("#button_search").addClass("on");
-				}
-				$("#toolbar_separator").remove();
-				$("#toolbar_unused_buttons").remove();
-			} else {
-				$("#toolbar").children().remove();
-			}
-
-			
-			tabs.forEach(function(Tab){
-				AppendTab({
-					tab: Tab,
-					Append: true
+		$("#pin_list").css({"white-space": "", "overflow-x": ""});
+	}
+	RefreshGUI();
+}
+	
+function Run() {
+	LoadPreferences();
+	chrome.windows.getCurrent({populate: false}, function(window) {
+		CurrentWindowId = window.id;
+		chrome.runtime.sendMessage({command: "is_bg_busy"}, function(response) {
+			hold = response;
+			chrome.runtime.sendMessage({command: "get_browser_tabs"}, function(response) {
+				bgtabs = Object.assign({}, response);
+				chrome.runtime.sendMessage({command: "get_groups", windowId: CurrentWindowId}, function(response) {
+					bggroups = Object.assign({}, response);
+					setTimeout(function() {
+						if (opt != undefined && browserId != undefined && bgtabs != undefined && bggroups != undefined && hold == false) {
+							Initialize();
+						} else {
+							Run();
+						}
+					},200);
 				});
 			});
-
-			tabs.forEach(function(Tab){
-				if (bg.tabs[Tab.id] && !Tab.pinned){
-					$("#"+Tab.id).addClass(bg.tabs[Tab.id].o);
-					if ($("#"+bg.tabs[Tab.id].p).length > 0 && $("#"+bg.tabs[Tab.id].p).is(".tab") && $("#"+Tab.id).find( $("#ch"+bg.tabs[Tab.id].p)).length == 0){
-						$("#ch"+bg.tabs[Tab.id].p).append($("#"+Tab.id));
-					}
-				}
-			});
-			
-			tabs.forEach(function(Tab){
-				if ($("#"+Tab.id)[0] && $("#"+Tab.id).parent().children().eq(bg.tabs[Tab.id].n)[0]){
-					if ($("#"+Tab.id).index() > bg.tabs[Tab.id].n){
-						$("#"+Tab.id).insertBefore($("#"+Tab.id).parent().children().eq(bg.tabs[Tab.id].n));
-					} else {
-						$("#"+Tab.id).insertAfter($("#"+Tab.id).parent().children().eq(bg.tabs[Tab.id].n));
-					}
-				}
-			});
-			tabs.forEach(function(Tab){
-				if ($("#"+Tab.id)[0] && $("#"+Tab.id).parent().children().eq(bg.tabs[Tab.id].n)[0]){
-					if ($("#"+Tab.id).index() < bg.tabs[Tab.id].n){
-						$("#"+Tab.id).insertAfter($("#"+Tab.id).parent().children().eq(bg.tabs[Tab.id].n));
-					}
-				}
-			});
-			delete theme;
-
-			SetIOEvents();
-			SetToolbarEvents();
-			SetTRefreshEvents();
-			SetTabEvents();
-			SetMenu();
-			RefreshGUI();
-			RefreshExpandStates();
-			UpdateData();
-			
-			// Scroll to active tab
-			setTimeout(function(){ ScrollToTab($(".active")[0].id); },100);
-			
-			
-			
-			if (navigator.userAgent.match("Vivaldi") !== null){
-				VivaldiRefreshMediaIcons();
-			}
-			
 		});
+	});
+}	
+	
+function Initialize() {
+	
+	RestoreStateOfGroupsToolbar();
+	var theme = LoadData(("theme"+localStorage["current_theme"]), {"TabsSizeSetNumber": 2, "ToolbarShow": true, "toolbar": DefaultToolbar});
+
+	if (browserId == "F") {
+		// I have no idea what is going on in latest build, but why top position for various things is different in firefox?????
+		if (theme.TabsSizeSetNumber > 1) {
+			document.styleSheets[document.styleSheets.length-1].insertRule(".tab_header>.tab_title { margin-top: -1px; }", document.styleSheets[document.styleSheets.length-1].cssRules.length);
+		}
 	}
 
+	ApplySizeSet(theme["TabsSizeSetNumber"]);
+	ApplyColorsSet(theme["ColorsSet"]);
+
+	AppendAllGroups();
+
+	chrome.tabs.query({currentWindow: true}, function(tabs) {
+
+// AddNewFolder();			
+// AddNewFolder();			
+// AddNewFolder();			
+// AddNewFolder();			
+
+		if (theme.ToolbarShow) {
+			if (theme.theme_version == DefaultTheme.theme_version) {
+				$("#toolbar").html(theme.toolbar);
+			} else {
+				$("#toolbar").html(DefaultToolbar);
+			}
+		}
+
+		let tc = tabs.length;
+		for (var ti = 0; ti < tc; ti++) {
+			AppendTab({tab: tabs[ti], Append: true, SkipSetActive: true});
+		}
+
+		for (var ti = 0; ti < tc; ti++) {
+			if (bgtabs[tabs[ti].id] && !tabs[ti].pinned && $("#"+bgtabs[tabs[ti].id].parent)[0] && $("#"+bgtabs[tabs[ti].id].parent).is(".group")) {
+				$("#"+bgtabs[tabs[ti].id].parent).append($("#"+tabs[ti].id));
+			}
+		}
+		
+		for (var ti = 0; ti < tc; ti++) {
+			if (bgtabs[tabs[ti].id] && !tabs[ti].pinned) {
+				if ($("#"+bgtabs[tabs[ti].id].parent).length > 0 && $("#"+bgtabs[tabs[ti].id].parent).is(".tab") && $("#"+tabs[ti].id).find($("#ch"+bgtabs[tabs[ti].id].parent)).length == 0) {
+					$("#ch"+bgtabs[tabs[ti].id].parent).append($("#"+tabs[ti].id));
+				}
+			}
+		}
+		
+		for (var ti = 0; ti < tc; ti++) {
+			if (bgtabs[tabs[ti].id] && !tabs[ti].pinned) {
+				$("#"+tabs[ti].id).addClass(bgtabs[tabs[ti].id].expand);
+			}
+		}
+
+		for (var group in bggroups) {
+			if ($("#"+group+" #"+bggroups[group].activetab)[0]) {
+				$("#"+bggroups[group].activetab).addClass("active");
+			}
+		}
+		
+		chrome.runtime.sendMessage({command: "get_active_group", windowId: CurrentWindowId}, function(response) {
+			SetActiveGroup(response, true, true);
+		});
+
+		RearrangeTreeTabs(tabs, bgtabs, true);
+		RefreshExpandStates();
+		
+		RestoreToolbarShelf();
+		RestoreToolbarSearchFilter();
+		SetToolbarShelfToggle("mousedown");
+		
+		StartChromeListeners();
+		SetIOEvents();
+		SetToolbarEvents();
+		SetTRefreshEvents();
+		SetGroupEvents();
+		SetTabEvents();
+		SetFolderEvents();
+		SetMenu();
+		SetDragAndDropEvents();
+
+		RearrangeBrowserTabsCheck();
+		Loadi18n();
+		
+		RestorePinListRowSettings();
+
+		setTimeout(function() {
+			UpdateData();
+			delete bgtabs;
+			delete theme;
+		},5000);
+		
+		if ($(".active:visible").length == 0) {
+			chrome.tabs.query({currentWindow: true, active: true}, function(tabs) {
+				if (tabs[0]) {
+					SetActiveTab(tabs[0].id);
+				}
+			});
+		}
+		
+		if (browserId == "V") {
+			VivaldiRefreshMediaIcons();
+		}
+			
+	});			
 }
 	
 
-function log(m){
-	bg.log(m);
+function log(m) {
+	chrome.runtime.sendMessage({command: "console_log", m: m});
 }

@@ -1,0 +1,30 @@
+body {
+	
+	--scrollbar_height: 4px;
+	--scrollbar_width: 16px;
+	--button_size: 22px;
+	
+	--pin_width: 26px;
+	--pin_height: 27px;
+
+	--tab_height: 23px;
+	--tab_height_line: 25px;
+
+	--title_font_size: 14px;
+
+	--tab_title_text_padding_left: 26px;
+	--tab_title_text_padding_right_with_close_button: 24px;
+
+	--favicon_size: 16px 16px;
+	--favicon_left: 6px;
+
+
+	--drag_area_top: 9px;
+	--drag_area_bottom: 6px;
+
+	--children_padding_left: 5px;
+	--close_top: 4px;
+	--close_right: 4px;
+	--close_height: 14px;
+	--close_width: 14px;
+}

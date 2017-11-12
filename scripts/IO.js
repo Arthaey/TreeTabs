@@ -1,92 +1,72 @@
+// Copyright (c) 2017 kroppy. All rights reserved.
+// Use of this source code is governed by a Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) license
+// that can be found at https://creativecommons.org/licenses/by-nc-nd/4.0/
+
 // **********      KEYBOARD AND MOUSE       ***************
 
-function SetIOEvents(){
-
-	// scroll horizontally on pin list
-	$("#pin_list").bind("mousewheel DOMMouseScroll", function(event) {
-		event = event.originalEvent;
-		var delta = event.wheelDelta > 0 || event.detail < 0 ? -1 : 1;
-			var multiplier = 1;
-			for (var t = 1; t < 20; t++){
-				setTimeout(function(){
-					$("#pin_list").scrollLeft($("#pin_list").scrollLeft()+(delta*multiplier));
-				}, t);
-				multiplier++;
-			}
-			multiplier = 20;
-			for (var t = 21; t < 40; t++){
-				setTimeout(function(){
-					$("#pin_list").scrollLeft($("#pin_list").scrollLeft()+(delta*multiplier));
-				}, t);
-				multiplier--;
-			}
-
+function BindTabsSwitchingToMouseWheel() {
+	// switch tabs with mouse scroll
+	$("#pin_list, .group").bind("mousewheel DOMMouseScroll", function(event) {
+		let prev = event.originalEvent.wheelDelta > 0 || event.originalEvent.detail < 0;
+		if (prev) {
+			ActivatePrevTab();
+		} else {
+			ActivateNextTab();
+		}
+		event.preventDefault();
 	});
-	
-	// this is for faster scrolling in firefox, for some reason its default scrolling is slow
-	if (bg.opt.faster_scroll){
-		$("#tab_list").bind("mousewheel DOMMouseScroll", function(event) {
-			event = event.originalEvent;
-			var delta = event.wheelDelta > 0 || event.detail < 0 ? -1.5 : 1.5;
-			var multiplier = 1;
-			for (var t = 1; t < 40; t++){
-				setTimeout(function(){
-					$("#tab_list").scrollTop($("#tab_list").scrollTop()+(delta*multiplier));
+}
+
+function SetIOEvents() {
+	if (!opt.switch_with_scroll) {
+		$("#pin_list").bind("mousewheel DOMMouseScroll", function(event) {
+			let direction = (event.originalEvent.wheelDelta > 0 || event.originalEvent.detail < 0) ? -1 : 1;
+			let speed = 0.1;
+			for (let t = 1; t < 40; t++) {
+				setTimeout(function() {
+					if (t < 30) {
+						speed = speed+0.1; // accelerate
+					} else {
+						speed = speed-0.3; // decelerate
+					}
+					$("#pin_list").scrollLeft($("#pin_list").scrollLeft()+(direction*speed));
 				}, t);
-				multiplier++;
-			}
-			multiplier = 40;
-			for (var t = 41; t < 80; t++){
-				setTimeout(function(){
-					$("#tab_list").scrollTop($("#tab_list").scrollTop()+(delta*multiplier));
-				}, t);
-				multiplier--;
 			}
 		});
 	}
-
+	
 	// catch keyboard keys
-	$(document).keydown(function(event){
-		if (MouseHoverOver == "pin_list"){
+	$(document).keydown(function(event) {
+		if (MouseHoverOver == "pin_list") {
 			// ctrl+a to select all
-			if (event.ctrlKey && event.which == 65){
+			if (event.ctrlKey && event.which == 65) {
 				$(".pin").addClass("selected");
 			}
 			// ctrl+i to invert selection
-			if (event.ctrlKey && event.which == 73){
+			if (event.ctrlKey && event.which == 73) {
 				$(".pin").toggleClass("selected");
 			}
 		}
-		if (MouseHoverOver == "tab_list"){
+		if (MouseHoverOver.match("g_|tab_list") !== null) {
 			// ctrl+a to select all
-			if (event.ctrlKey && event.which == 65){
-				$(".tab").addClass("selected");
+			if (event.ctrlKey && event.which == 65) {
+				$("#"+active_group).children(".tab:visible").addClass("selected");
 			}
 			// ctrl+i to invert selection
-			if (event.ctrlKey && event.which == 73){
-				$(".tab").toggleClass("selected");
+			if (event.ctrlKey && event.which == 73) {
+				$(".tab:visible").toggleClass("selected");
 			}
 		}
 		RefreshGUI();
 	});
 
-	$(document).on("dragenter", "#toolbar", function(event){ // set mouse over id
-		MouseHoverOver = this.id;
-	});
-	$(document).on("mouseenter", "#pin_list, #tab_list, #toolbar", function(event){ // set mouse over id
-		MouseHoverOver = this.id;
-	});
-	$(document).on("mouseleave", window, function(event){
-		MouseHoverOver = "";
-	});
-
 	// remove middle mouse and set hiding menu
-	document.body.onmousedown = function(event){
-		if (event.button == 1 && bg.opt.close_with_MMB == true){
+	document.body.onmousedown = function(event) {
+		if (event.button == 1 && opt.close_with_MMB == true) {
 			event.preventDefault();
 		}
-		if (event.button == 0 && !$(event.target).is(".menu_item")){
-			$(".menu").hide(0);
+		if (event.button == 0 && !$(event.target).is(".menu_item")) {
+			$(".menu").hide(300);
 		}
 	};
 }

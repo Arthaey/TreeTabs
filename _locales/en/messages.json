@@ -5,6 +5,8 @@
 	"extDesc": {
 		"message": "Manage your tabs in the sidebar!"
 	},
+
+
 	"button_new": {
 		"message": "Press left mouse button to open new tab. \nPress middle mouse button to clone the active tab. \nPress right mouse button to scroll the list to the active tab."
 	},
@@ -23,14 +25,14 @@
 	"button_tools": {
 		"message": "Tools"
 	},
+	"button_groups": {
+		"message": "Groups"
+	},
 	"filter_search_go_prev": {
 		"message": "Previous search result"
 	},
 	"filter_search_go_next": {
 		"message": "Next search result"
-	},
-	"button_filter_type": {
-		"message": "Search titles or urls"
 	},
 	"button_bookmarks": {
 		"message": "Unsorted bookmarks"
@@ -53,6 +55,59 @@
 	"button_discard": {
 		"message": "Unload tabs"
 	},
+	"button_filter_type": {
+		"message": "Search titles or urls"
+	},
+
+
+
+
+
+	"button_groups_toolbar_hide": {
+		"message": "Hide/Show Groups toolbar"
+	},
+	"button_new_group": {
+		"message": "New group"
+	},
+	"button_remove_group": {
+		"message": "Remove group.\nHold shift key to close tabs from this group"
+	},
+	"button_edit_group": {
+		"message": "Edit group"
+	},
+
+	"button_import_group": {
+		"message": "Import group"
+	},
+	"button_export_group": {
+		"message": "Export group"
+	},
+
+	"button_backup": {
+		"message": "Session"
+	},
+	"button_import_bak": {
+		"message": "Import session"
+	},
+	"button_import_merge_bak": {
+		"message": "Import and merge session.\nImporter will try to match current tabs with those from saved session, instead of opening a new window."
+	},
+	"button_export_bak": {
+		"message": "Export session"
+	},
+	"button_load_bak1": {
+		"message": "EMERGENCY if lost groupings: Load latest internal backup (autosave is made every 5 minutes)"
+	},
+	"button_load_bak2": {
+		"message": "EMERGENCY if lost groupings: Load previous to latest internal backup (autosave is made every 10 minutes)"
+	},
+	"button_load_bak3": {
+		"message": "EMERGENCY if lost groupings: Load oldest internal backup (autosave is made every 30 minutes)"
+	},
+
+
+
+
 	"tabs_menu_expand_all": {
 		"message": "Expand all trees"
 	},
@@ -89,6 +144,9 @@
 	"tabs_menu_unpin": {
 		"message": "Unpin"
 	},
+	"tabs_menu_close_tree": {
+		"message": "Close tree"
+	},
 	"tabs_menu_close": {
 		"message": "Close"
 	},
@@ -104,6 +162,14 @@
 	"tabs_menu_discard": {
 		"message": "Unload"
 	},
+
+
+
+
+
+
+
+
 	"options_vivaldi": {
 		"message": " Vivaldi "
 	},
@@ -122,8 +188,11 @@
 	"options_tabs": {
 		"message": " Tabs "
 	},
-	"options_skip_load": {
-		"message": "discard tree structure after browser's restart, this option is for those who don't use browser's session. Basically it disables loading database at startup."
+	"options_syncro_tabbar_tabs_order": {
+		"message": "synchronise TabBar tabs order with Tree Tabs (with too many tabs, after moving tabs, Tree Tabs may be unresponsive for a second)"
+	},
+	"options_switch_with_scroll": {
+		"message": "switch tabs with mouse wheel"
 	},
 	"options_close_with_MMB": {
 		"message": "close tabs with middle mouse button"
@@ -131,18 +200,22 @@
 	"options_always_show_close": {
 		"message": "show close button on all tabs"
 	},
+	"options_never_show_close": {
+	 "message": "don't show close button (option above will be ignored)"
+	},
 	"options_close_other_trees": {
 		"message": "automatically collapse other trees on expand"
-	},
-	"options_promote_children": {
-		"message": "promote children tabs on close, if disabled, when closing the parent of a tree structure, all tabs will be closed (be careful, because undo close tab will not recover the trees structure)"
 	},
 	"options_open_tree_on_hover": {
 		"message": "auto expand collapsed trees when dragging and holding for a second over them"
 	},
-	"options_max_tree_depth": {
-		"message": "maximum tree depth: set it to -1 for unlimited branches, 0 for flat tabs placement (no trees), any number above 0 will be its maximum"
+	"options_promote_children": {
+		"message": "promote children tabs on close, if disabled, when closing the parent of a tree structure, all tabs will be closed (be careful, because undo close tab will not recover the trees structure)"
 	},
+	"options_skip_load": {
+		"message": "discard tree structure after browser's restart, this option is for those who don't use browser's session. Basically it disables loading database at startup."
+	},
+
 	"options_append_child_tab": {
 		"message": "append children tabs at the"
 	},
@@ -152,20 +225,9 @@
 	"options_append_child_tab_bottom": {
 		"message": "bottom"
 	},
-	"options_append_child_tab_after_limit": {
-		"message": "once reached tree depth, place tab on the same level, but"
-	},
-	"options_append_child_tab_after_limit_top": {
-		"message": "at the top"
-	},
-	"options_append_child_tab_after_limit_after": {
-		"message": "after parent"
-	},
-	"options_append_child_tab_after_limit_bottom": {
-		"message": "at the bottom"
-	},
+
 	"options_append_orphan_tab": {
-		"message": "append orphan tabs (opened from +, shortcut or bookmark)"
+		"message": "append orphan tabs (new tabs, tabs opened from shortcuts or from bookmarks)"
 	},
 	"options_append_orphan_tab_top": {
 		"message": "at the top"
@@ -179,6 +241,7 @@
 	"options_append_orphan_tab_as_child": {
 		"message": "treat as active's tab child"
 	},
+	
 	"options_after_closing_active_tab": {
 		"message": "after closing active tab,"
 	},
@@ -191,50 +254,44 @@
 	"options_after_closing_active_tab_go_browser": {
 		"message": "let browser handle which tab to activate"
 	},
+
+	"options_append_child_tab_after_limit": {
+		"message": "once reached tree depth, place tab on the same level, but"
+	},
+	"options_append_child_tab_after_limit_top": {
+		"message": "at the top"
+	},
+	"options_append_child_tab_after_limit_after": {
+		"message": "after parent"
+	},
+	"options_append_child_tab_after_limit_bottom": {
+		"message": "at the bottom"
+	},
+	"options_max_tree_drag_drop": {
+		"message": "Limit Drag&Drop to tree's maximum depth as well"
+	},
+
+	"options_max_tree_depth": {
+		"message": "maximum tree depth: set it to -1 for unlimited branches, 0 for flat tabs placement (no trees), any number above 0 will be its maximum"
+	},
+
+
+
+
+
+
+
+
+
+
 	"options_theme": {
 		"message": "Theme"
 	},
-	"options_theme_tabs": {
-		"message": " Tabs look "
-	},
-	"options_theme_tabs_sample_text_normal": {
-		"message": "Normal"
-	},
-	"options_theme_tabs_sample_text_active_selected": {
-		"message": "Active and selected"
-	},
-	"options_theme_tabs_sample_text_discarded": {
-		"message": "Unloaded (discarded)"
-	},
-	"options_theme_tabs_sample_text_search_result": {
-		"message": "Search result"
-	},
-	"options_theme_tabs_sample_text_search_result_higlighted": {
-		"message": "Search result higlighted"
-	},
-	"options_theme_tabs_sample_text_search_result_selected": {
-		"message": "Search result, selected"
-	},
-	"options_theme_tabs_sample_text_search_result_selected_active": {
-		"message": "Search result, selected, active"
-	},
-	"options_toolbar": {
-		"message": " Toolbar "
-	},
-	"options_available_buttons": {
-		"message": "Drag and drop buttons to arrange them, drop to the green box, buttons you don't want to use"
-	},
-	"options_scrollbars": {
-		"message": " Scrollbars "
-	},
-	"options_scrollbar_pin_list": {
-		"message": "pinned tabs bar scrollbar height"
-	},
-	"options_scrollbar_tab_list": {
-		"message": "tabs list scrollbar width"
-	},
-	"options_tabs_size": {
-		"message": "Tabs size"
+
+	
+
+	"options_rename_theme_button": {
+		"message": "Rename"
 	},
 	"options_add_theme_button": {
 		"message": "Add new"
@@ -242,15 +299,216 @@
 	"options_remove_theme_button": {
 		"message": "Remove"
 	},
-	"options_export_theme_button": {
-		"message": "Export"
-	},
 	"options_import_theme_button": {
 		"message": "Import"
 	},
-	"options_rename_theme_button": {
-		"message": "Rename"
+	"options_export_theme_button": {
+		"message": "Export"
 	},
+
+	
+	
+
+
+
+
+	"options_toolbar": {
+		"message": " Toolbar "
+	},
+	"options_available_buttons": {
+		"message": "Drag and drop buttons to arrange them, drop to the green box, buttons you don't want to use"
+	},
+
+	"options_reset_toolbar_button": {
+		"message": "Reset toolbar"
+	},
+
+
+
+
+
+
+	"options_theme_tabs": {
+		"message": " Tabs look "
+	},
+
+
+
+
+
+
+	"options_theme_tabs_sample_text_normal": {
+		"message": "Normal"
+	},
+	"options_theme_tabs_sample_text_normal_hover": {
+		"message": "Normal, mouse hover over"
+	},
+	"options_theme_tabs_sample_text_normal_selected": {
+		"message": "Normal selected"
+	},
+	"options_theme_tabs_sample_text_normal_selected_hover": {
+		"message": "Normal selected, mouse hover over"
+	},
+	"options_theme_tabs_sample_text_active": {
+		"message": "Active"
+	},
+	"options_theme_tabs_sample_text_active_hover": {
+		"message": "Active, mouse hover over"
+	},
+	"options_theme_tabs_sample_text_active_selected": {
+		"message": "Active and selected"
+	},
+	"options_theme_tabs_sample_text_active_selected_hover": {
+		"message": "Active and selected, mouse hover over"
+	},
+
+	"options_theme_tabs_sample_text_discarded": {
+		"message": "Unloaded (discarded)"
+	},
+	"options_theme_tabs_sample_text_discarded_hover": {
+		"message": "Unloaded, mouse hover over"
+	},
+	"options_theme_tabs_sample_text_discarded_selected": {
+		"message": "Unloaded and selected"
+	},
+	"options_theme_tabs_sample_text_discarded_selected_hover": {
+		"message": "Unloaded and selected, mouse hover over"
+	},
+
+	"options_theme_tabs_sample_text_search_result": {
+		"message": "Search result"
+	},
+	"options_theme_tabs_sample_text_search_result_hover": {
+		"message": "Search result, mouse hover over"
+	},
+	"options_theme_tabs_sample_text_search_result_active": {
+		"message": "Search result active"
+	},
+	"options_theme_tabs_sample_text_search_result_active_hover": {
+		"message": "Search result active, mouse hover over"
+	},
+
+	"options_theme_tabs_sample_text_search_result_selected": {
+		"message": "Search result selected"
+	},
+	"options_theme_tabs_sample_text_search_result_selected_hover": {
+		"message": "Search result selected, mouse hover over"
+	},
+	"options_theme_tabs_sample_text_search_result_selected_active": {
+		"message": "Search result selected, active"
+	},
+	"options_theme_tabs_sample_text_search_result_selected_active_hover": {
+		"message": "Search result selected, active, mouse hover over"
+	},
+
+	
+	
+	"options_theme_tabs_sample_text_search_result_highlighted": {
+		"message": "Search result highlighted"
+	},
+	"options_theme_tabs_sample_text_search_result_highlighted_hover": {
+		"message": "Search result highlighted, mouse hover over"
+	},
+	"options_theme_tabs_sample_text_search_result_highlighted_active": {
+		"message": "Search result highlighted, active"
+	},
+	"options_theme_tabs_sample_text_search_result_highlighted_active_hover": {
+		"message": "Search result highlighted, active, mouse hover over"
+	},
+
+
+
+
+	
+	"options_theme_tabs_sample_text_search_result_highlighted_selected": {
+		"message": "Search result highlighted, selected"
+	},
+	"options_theme_tabs_sample_text_search_result_highlighted_selected_hover": {
+		"message": "Search result highlighted, selected, mouse hover over"
+	},
+	"options_theme_tabs_sample_text_search_result_highlighted_selected_active": {
+		"message": "Search result highlighted, selected, active"
+	},
+	"options_theme_tabs_sample_text_search_result_highlighted_selected_active_hover": {
+		"message": "Search result highlighted, selected, active, mouse hover over"
+	},
+
+
+
+
+	
+	
+	
+
+
+
+	"options_color_pick_filter_clear_icon": {
+	 "message": "Clear search result x button color"
+	},
+
+	"options_color_pick_hover": {
+	 "message": "On hover"
+	},
+	"options_color_pick_border": {
+	 "message": "Border color"
+	},
+	"options_color_pick_background": {
+	 "message": "Fill color"
+	},
+	"options_color_pick_font": {
+	 "message": "Font color"
+	},
+	
+	"options_tabs_indentation_down": {
+	 "message": "Decrease tabs indentation"
+	},
+	"options_tabs_indentation_up": {
+	 "message": "Increase tabs indentation"
+	},
+	
+	"options_tabs_roundness_down": {
+	 "message": "Make tabs corners more square"
+	},
+	"options_tabs_roundness_up": {
+	 "message": "Make tabs rounder"
+	},
+	
+	"options_tabs_size_down": {
+	 "message": "Decrease tabs size"
+	},
+	"options_tabs_size_up": {
+	 "message": "Increase tabs size"
+	},
+	
+
+
+
+
+
+
+
+
+	"options_tab_list_scrollbar_width_down": {
+	 "message": "Decrease scrollbars width"
+	},
+	"options_tab_list_scrollbar_width_up": {
+	 "message": "Increase scrollbars width"
+	},
+	"options_tab_list_scrollbar_height_down": {
+	 "message": "Decrease scrollbars height"
+	},
+	"options_tab_list_scrollbar_height_up": {
+	 "message": "Increase scrollbars height"
+	},
+
+	
+	
+
+
+
+
+
+
 	"options_there_is_a_theme_with_this_name": {
 		"message": "Theme with this name already exists, try a new name"
 	},
@@ -266,160 +524,70 @@
 	"options_loaded_theme_newer_version": {
 		"message": "Looks like loaded theme was saved in a newer version of the extension, can't load!"
 	},
-	"options_color_theme_toolbar_background": {
-		"message": " toolbar background"
-	},
-	"options_color_toolbar_border_bottom": {
-		"message": " toolbar borders"
-	},
-	"options_color_button_icons": {
-		"message": " button icon"
-	},
-	"options_color_button_border": {
-		"message": " button borders"
-	},
-	"options_color_button_background": {
-		"message": " button background"
-	},
-	"options_color_button_hover_border": {
-		"message": " button hover border"
-	},
-	"options_color_button_hover_background": {
-		"message": " button hover background"
-	},
-	"options_color_filter_box_background": {
-		"message": " searchbox background"
-	},
-	"options_color_filter_box_border": {
-		"message": " searchbox borders"
-	},
-	"options_color_filter_box_font": {
-		"message": " searchbox font"
-	},
-	"options_color_filter_clear_icon": {
-		"message": " searchbox clear button"
-	},
-	"options_color_pin_list_border_bottom": {
-		"message": " pin list separator line"
-	},
-	"options_color_pin_list_background": {
-		"message": " pin list background"
-	},
-	"options_color_tab_list_background": {
-		"message": " tab list background"
-	},
-	"options_color_tab_background": {
-		"message": " tab background"
-	},
-	"options_color_tab_border": {
-		"message": " tab border"
-	},
-	"options_color_tab_hover_background": {
-		"message": " hover over tab, background"
-	},
+	
+	
+	
 
-	"options_color_tab_hover_border": {
-		"message": " hover over tab, border"
-	},
-	"options_color_drag_indicator": {
-		"message": " drag&drop indicator"
-	},
-	"options_color_tab_title": {
-		"message": " tab title font"
-	},
-	"options_color_tab_title_active": {
-		"message": " active tab title font"
-	},
-	"options_color_tab_title_discarded": {
-		"message": " unloaded tab title font"
-	},
-	"options_color_tab_selected_background": {
-		"message": " selected tab background"
-	},
-	"options_color_tab_selected_border": {
-		"message": " active/selected tab border"
-	},
-	"options_color_tab_selected_hover_border": {
-		"message": " hover over active/selected tab border"
-	},
-	"options_color_tab_selected_hover_background": {
-		"message": " hover over active/selected tab background"
-	},
-	"options_color_tab_filtered": {
-		"message": " search result"
-	},
-	"options_color_tab_filtered_highlighted": {
-		"message": " search result highlighted"
-	},
-	"options_color_tab_filtered_selected": {
-		"message": " search result selected"
-	},
-	"options_color_tab_filtered_selected_active": {
-		"message": " search result selected active"
-	},
-	"options_color_close_x": {
-		"message": " close button (x)"
-	},
-	"options_color_close_hover_x": {
-		"message": " hover over close button, x color"
-	},
-	"options_color_close_hover_border": {
-		"message": " hover over close button, border"
-	},
-	"options_color_close_hover_background": {
-		"message": " hover over close button, background"
-	},
-	"options_color_expand_open_border": {
-		"message": " open tab expand box, border"
-	},
-	"options_color_expand_open_background": {
-		"message": " open tab expand box, background"
-	},
-	"options_color_expand_closed_border": {
-		"message": " closed tab expand box, border"
-	},
-	"options_color_expand_closed_background": {
-		"message": " closed tab expand box, background"
-	},
-	"options_color_expand_lines": {
-		"message": " tree hierarchy lines"
-	},
-	"options_color_scrollbar_thumb": {
-		"message": " scrollbar thumb"
-	},
-	"options_color_scrollbar_thumb_hover": {
-		"message": " scrollbar thumb hover"
-	},
-	"options_color_scrollbar_track": {
-		"message": " scrollbar background"
-	},
-	"options_color_tabs_menu_background": {
-		"message": " background"
-	},
-	"options_color_tabs_menu_border": {
-		"message": " border"
-	},
-	"options_color_tabs_menu_hover_background": {
-		"message": " hover over item, background"
-	},
-	"options_color_tabs_menu_hover_border": {
-		"message": " hover over item, border"
-	},
-	"options_color_tabs_menu_font": {
-		"message": " font"
-	},
-	"options_color_tabs_menu_separator": {
-		"message": " separator"
-	},
+
+
+	
+
+
 	"options_example_menu_item": {
 		"message": "menu item"
 	},
 	"options_menu": {
 		"message": " Menu "
 	},
-	"options_active_tab_font_bold": {
-		"message": "bold font for active tab"
+
+	
+
+
+	
+	
+	"options_vivaldi_copied_url": {
+	 "message": "Web Panel Url has been copied to clipboard, add a new Web Panel and paste url."
 	},
+	"options_copied_wallet_address": {
+	 "message": "Wallet address has been copied to clipboard"
+	},
+	
+	
+	"options_clear_data": {
+	 "message": "Sidebar is not loading? Clear everything! ATTENTION! Tabs arrangement will be lost as well!"
+	},
+	
+	
+	
+	
+
+
+
+
+	
+	
+	
+	"group_edit_button_cancel": {
+		"message": "Cancel"
+	},
+	
+	"group_edit_button_confirm": {
+		"message": "Ok"
+	},
+	
+
+
+
+
+	
+	
+	"caption_ungrouped_group": {
+		"message": "Ungrouped tabs"
+	},
+	"caption_noname_group": {
+		"message": "untitled"
+	},
+	
 	"caption_clear_filter": {
 		"message": "Clear search results"
 	},
@@ -428,14 +596,9 @@
 	},
 	"caption_searchbox": {
 		"message": " Search tabs..."
-	},
-	"options_never_show_close": {
-	 "message": "don't show close button (option above will be ignored)"
-	},
-	"tabs_menu_close_tree": {
-		"message": "Close tree"
-	},
-	"options_faster_scroll": {
-		"message": "Faster scrolling"
 	}
+	
+
+	
+	
 }
