@@ -38,25 +38,20 @@ function SetDragAndDropEvents() {
 	// SET FOLDER DRAG SOURCE
 	$(document).on("dragstart", ".folder_header", function(event) {
 		DragAndDrop.DragNodeClass = "folder";
-		DragAndDrop.Dropped = false;
 		event.stopPropagation();
 		event.originalEvent.dataTransfer.setDragImage(document.getElementById("DragImage"), 0, 0);
 		event.originalEvent.dataTransfer.setData("text", "");
-
 
 		DragAndDrop.ComesFromWindowId = CurrentWindowId;
 		DragAndDrop.SelectedTabsIds.splice(0, DragAndDrop.SelectedTabsIds.length);
 		DragAndDrop.TabsIds.splice(0, DragAndDrop.TabsIds.length);
 		DragAndDrop.Parents.splice(0, DragAndDrop.Parents.length);
-		
-		// chrome.runtime.sendMessage({command: "drag_drop", DragNodeClass: "tab", SelectedTabsIds: DragAndDrop.SelectedTabsIds, TabsIds: DragAndDrop.TabsIds, Parents: DragAndDrop.Parents, ComesFromWindowId: CurrentWindowId, Depth: DragAndDrop.Depth});
 	});
 
 
 	// SET TAB DRAG SOURCE
 	$(document).on("dragstart", ".tab_header", function(event) {
 		DragAndDrop.DragNodeClass = "tab";
-		DragAndDrop.Dropped = false;
 		event.stopPropagation();
 		event.originalEvent.dataTransfer.setDragImage(document.getElementById("DragImage"), 0, 0);
 		event.originalEvent.dataTransfer.setData("text", "");
@@ -80,14 +75,14 @@ function SetDragAndDropEvents() {
 		DragAndDrop.Parents.splice(0, DragAndDrop.Parents.length);
 		
 		DragAndDrop.Depth = 0;
-		$(".selected:visible").find(".tab").each(function() {
-			if ($(this).parents(".tab").length > DragAndDrop.Depth) { DragAndDrop.Depth = $(this).parents(".tab").length; }
+		$(".selected:visible").find(".pin, .tab").each(function() {
+			if ($(this).parents(".pin, .tab").length > DragAndDrop.Depth) { DragAndDrop.Depth = $(this).parents(".pin, .tab").length; }
 		});
-		DragAndDrop.Depth -= $(this).parents(".tab").length-1;
+		DragAndDrop.Depth -= $(this).parents(".pin, .tab").length-1;
 		if (DragAndDrop.Depth < 0) {
 			DragAndDrop.Depth = 0;
 		}
-		
+		console.log(DragAndDrop.Depth);
 		$(".selected:visible").each(function() {
 			DragAndDrop.SelectedTabsIds.push(parseInt(this.id));
 			DragAndDrop.TabsIds.push(parseInt(this.id));
@@ -107,29 +102,47 @@ function SetDragAndDropEvents() {
 		$(".highlighted_drop_target").removeClass("highlighted_drop_target");
 	});
 	
-	// SET DROP TARGET WHEN ENTERING PINS AND TABS
-	$(document).on("dragenter", ".tab>.drag_entered_top:not(.highlighted_drop_target), .tab>.drag_entered_bottom:not(.highlighted_drop_target), .tab>.drag_enter_center:not(.highlighted_drop_target)", function(event) {
+	// SET DROP TARGET WHEN ENTERING PINS
+	$(document).on("dragenter", ".pin>.drag_entered_top:not(.highlighted_drop_target), .pin>.drag_entered_bottom:not(.highlighted_drop_target)", function(event) {
 		event.stopPropagation();
-		if ($(".selected:visible").find($(this)).length > 0 || DragAndDrop.DragNodeClass != "tab") { return; }
-		if (opt.max_tree_drag_drop && opt.max_tree_depth >= 0) {
-			if ($(this).is(".drag_enter_center")) {
-				if (opt.max_tree_depth == 0) { return; }
-				if ($(this).parents(".tab").length + DragAndDrop.Depth > opt.max_tree_depth) { return; }
-			} else {
+		if (DragAndDrop.DragNodeClass == "tab") {
+			$(".highlighted_drop_target").removeClass("highlighted_drop_target");
+			$(this).addClass("highlighted_drop_target");
+		}
+	});
+	
+	// SET DROP TARGET WHEN ENTERING TABS
+	$(document).on("dragenter", ".tab>.drag_entered_top:not(.highlighted_drop_target), .tab>.drag_entered_bottom:not(.highlighted_drop_target)", function(event) {
+		event.stopPropagation();
+		if ($(".selected:visible").find($(this)).length == 0 && DragAndDrop.DragNodeClass == "tab") {
+			if (opt.max_tree_drag_drop && opt.max_tree_depth >= 0) {
 				if ($(this).parents(".tab").length + DragAndDrop.Depth > opt.max_tree_depth+1) { return; }
 			}
+			$(".highlighted_drop_target").removeClass("highlighted_drop_target");
+			$(this).addClass("highlighted_drop_target");
 		}
-		$(".highlighted_drop_target").removeClass("highlighted_drop_target");
-		$(this).addClass("highlighted_drop_target");
 	});
+	$(document).on("dragenter", ".tab>.drag_enter_center:not(.highlighted_drop_target)", function(event) {
+		event.stopPropagation();
+		if ($(".selected:visible").find($(this)).length == 0 && DragAndDrop.DragNodeClass == "tab" && opt.max_tree_depth != 0) {
+			if (opt.max_tree_drag_drop) {
+				if (opt.max_tree_depth == 0) { return; }
+				if ($(this).parents(".tab").length + DragAndDrop.Depth > opt.max_tree_depth) { return; }
+			}
+			$(".highlighted_drop_target").removeClass("highlighted_drop_target");
+			$(this).addClass("highlighted_drop_target");
+		}
+	});
+
 	
 	// SET DROP TARGET WHEN ENTERING FOLDERS
 	$(document).on("dragenter", ".folder>.drag_entered_top:not(.highlighted_drop_target), .folder>.drag_entered_bottom:not(.highlighted_drop_target), .folder>.drag_enter_center:not(.highlighted_drop_target)", function(event) {
 		event.stopPropagation();
-		if (DragAndDrop.DragNodeClass == "group") { return; }
-		// if (/* $(".selected:visible").find($(this)).length > 0 ||  */  DragAndDrop.DragNodeClass != "folder") { return; }
-		$(".highlighted_drop_target").removeClass("highlighted_drop_target");
-		$(this).addClass("highlighted_drop_target");
+		if (DragAndDrop.DragNodeClass != "group") {
+			// if (/* $(".selected:visible").find($(this)).length > 0 ||  */  DragAndDrop.DragNodeClass != "folder") { return; }
+			$(".highlighted_drop_target").removeClass("highlighted_drop_target");
+			$(this).addClass("highlighted_drop_target");
+		}
 	});
 	
 	// SET DROP TARGET, PIN_LIST, TAB_LIST, GROUP OR GROUP_BUTTON
@@ -157,15 +170,10 @@ function SetDragAndDropEvents() {
 
 	// DROP
 	$(document).on("drop", "*", function(event) {
-		DragAndDrop.Dropped = true;
-		chrome.runtime.sendMessage({command: "drag_dropped", DragAndDrop: true});
 		event.stopPropagation();
-
-		if (DragAndDrop.ComesFromWindowId == CurrentWindowId && MouseHoverOver != "" && $(".highlighted_drop_target")[0] != undefined) {
+		if (DragAndDrop.ComesFromWindowId == CurrentWindowId /* && ($(window).width() > event.clientX || $(window).height() > event.clientY) */) {
 			DropToTarget($(".highlighted_drop_target"));
-		}
-
-		if (DragAndDrop.ComesFromWindowId != CurrentWindowId && $(".highlighted_drop_target")[0] != undefined) {
+		} else {
 			$(".selected").addClass("selected_frozen").removeClass("selected");
 			let target = $(".highlighted_drop_target");
 			let counter = DragAndDrop.TabsIds.length;
@@ -199,11 +207,14 @@ function SetDragAndDropEvents() {
 
 	// DETACH
 	$(document).on("dragend", ".tab_header", function(event) {
-		setTimeout(function() {
-			if (DragAndDrop.Dropped == false && MouseHoverOver == "" && $(".highlighted_drop_target")[0] == undefined) {
+		if (DragAndDrop.ComesFromWindowId == CurrentWindowId) {
+			if (browserId == "F" && (event.screenX < event.view.mozInnerScreenX ||  event.screenX > (event.view.mozInnerScreenX + $(window).width()) || (event.screenY < event.view.mozInnerScreenY || event.screenY > (event.view.mozInnerScreenY + $(window).height())))) {
 				DetachTabs(DragAndDrop.TabsIds);
 			}
-		},1100);
+			if (browserId != "F" && (event.pageX < 0 || event.pageX > $(window).width() || event.pageY < 0 || event.pageY > $(window).height())) {
+				DetachTabs(DragAndDrop.TabsIds);
+			}
+		}
 	});
 
 
@@ -303,6 +314,28 @@ function DropToTarget(TargetNode) {
 	
 	$(".highlighted_selected").addClass("selected").removeClass("highlighted_selected");
 	
+
+
+
+
+
+	// if ($(".tab.active:visible")[0] == undefined) {
+		// bggroups[$("#"+tabId).parents(".group")[0].id].activetab = parseInt(tabId);
+		
+		// if ($("#"+tabId).parents(".group")[0].id != active_group) {
+			// SetActiveGroup($("#"+tabId).parents(".group")[0].id, false, true);
+		// }
+		
+		
+		// chrome.runtime.sendMessage({command: "save_groups", groups: bggroups, windowId: CurrentWindowId});
+		
+		
+		
+	// }
+
+
+
+
 	RefreshExpandStates();
 	DragAndDrop.timeout = false;
 	RefreshGUI();
