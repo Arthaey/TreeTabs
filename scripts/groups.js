@@ -4,32 +4,52 @@
 
 // **********       GROUPS FUNCTIONS        ***************
 
-function AppendAllGroups() {
+function SaveGroups() {
+	chrome.runtime.sendMessage({command: "save_groups", groups: bggroups, windowId: CurrentWindowId});
+}
+function AppendGroups(Groups) {
 	// var scroll = $("#group_list").scrollTop();
-	for (var group in bggroups) {
-		AppendGroupToList(bggroups[group].id, bggroups[group].name, bggroups[group].font);
+	for (var group in Groups) {
+		AppendGroupToList(Groups[group].id, Groups[group].name, Groups[group].font);
 	}
-	RearrangeGroups(0);
+	setTimeout(function() {
+		RearrangeGroupsButtons(0);
+	}, 1000);
 }
 
-function RearrangeGroups(stack) {
+function RearrangeGroupsButtons(stack) {
 	$(".group_button").each(function() {
-		if ($("#group_list").children().eq(bggroups[(this.id).substr(1)].index)[0] && $(this).index() > bggroups[(this.id).substr(1)].index) {
-			$(this).insertBefore($("#group_list").children().eq(bggroups[(this.id).substr(1)].index)[0]);
-		} else {
-			if ($("#group_list").children().eq(bggroups[(this.id).substr(1)].index)[0] && $(this).index() < bggroups[(this.id).substr(1)].index) {
-				$(this).insertAfter($("#group_list").children().eq(bggroups[(this.id).substr(1)].index)[0]);
+		let groupId = (this.id).substr(1);
+		if (bggroups[groupId]) {
+			if ($("#group_list").children().eq(bggroups[groupId].index)[0] && $(this).index() > bggroups[groupId].index) {
+				$(this).insertBefore($("#group_list").children().eq(bggroups[groupId].index)[0]);
+			} else {
+				if ($("#group_list").children().eq(bggroups[groupId].index)[0] && $(this).index() < bggroups[groupId].index) {
+					$(this).insertAfter($("#group_list").children().eq(bggroups[groupId].index)[0]);
+				}
+			}
+			if ($(this).index() != bggroups[groupId].index && stack < 10) {
+				RearrangeGroupsButtons(stack+1);
 			}
 		}
-		if ($(this).index() != bggroups[(this.id).substr(1)].index && stack < 10) {
-			RearrangeGroups(stack+1);
+	});
+}
+function RearrangeGroupsLists() {
+	let scroll = $("#"+active_group).scrollTop();
+	$(".group_button").each(function() {
+		let groupId = (this.id).substr(1);
+		if ($("#"+groupId)[0]) {
+			$("#groups").append($("#"+groupId));
 		}
 	});
+	$("#"+active_group).scrollTop(scroll);
 }
 
 function AppendGroupToList(groupId, group_name, font_color) {
 	if ($("#"+groupId).length == 0 && $("#groups")[0]) {
 		var grp = document.createElement("div"); grp.className = "group"; grp.id = groupId; $("#groups")[0].appendChild(grp);
+		var gcf = document.createElement("div"); gcf.className = "children_folders"; gcf.id = "cf"+groupId; grp.appendChild(gcf);
+		var gct = document.createElement("div"); gct.className = "children_tabs"; gct.id = "ch"+groupId; grp.appendChild(gct);
 	}
 	if ($("#_"+groupId).length == 0) {
 		var gbn = document.createElement("div"); gbn.className = "group_button"; gbn.id = "_"+groupId; $("#group_list")[0].appendChild(gbn);
@@ -57,11 +77,10 @@ function GenerateNewGroupID(){
 
 function AddNewGroup(p) {
 	var newId = GenerateNewGroupID();
-	bggroups[newId] = { id: newId, index: 0, activetab: 0, activetab_ttid: "", name: (p.name ? p.name : caption_noname_group), font:  (p.font ? p.font : "")  };
+	bggroups[newId] = { id: newId, index: 0, active_tab: 0, active_tab_ttid: "", name: (p.name ? p.name : caption_noname_group), font:  (p.font ? p.font : "")  };
 	AppendGroupToList(newId, bggroups[newId].name, bggroups[newId].font);
 	UpdateBgGroupsOrder();
 	return newId;
-	// chrome.runtime.sendMessage({command: "save_groups", groups: bggroups, windowId: CurrentWindowId});
 }
 
 // function AppendTabsToGroup(p) {
@@ -70,23 +89,34 @@ function AddNewGroup(p) {
 // remove group, delete tabs if close_tabs is true
 function GroupRemove(groupId, close_tabs) {
 	if (close_tabs) {
-		CloseTabs($("#"+active_group).find(".tab").map(function() {return parseInt(this.id);}).toArray());
-	} else {
-		$("#"+groupId).children().each(function() {
-			$("#tab_list").append(this);
+		CloseTabs($("#"+groupId).find(".tab").map(function() {return parseInt(this.id);}).toArray());
+		$("#"+groupId+" .folder").each(function() {
+			RemoveFolder(this.id);
 		});
+	} else {
+		$("#cf"+groupId).children().each(function() {
+			$("#cftab_list").append(this);
+		});
+		$("#ch"+groupId).children().each(function() {
+			$("#chtab_list").append(this);
+		});
+		RefreshExpandStates();
+		RefreshCounters();
 	}
 	delete bggroups[groupId];
-	if ($("#_"+groupId).prev(".group_button")[0]) {
-		SetActiveGroup(($("#_"+groupId).prev(".group_button")[0].id).substr(1), true, true);
-	} else {
-		if ($("#_"+groupId).next(".group_button")[0]) {
-			SetActiveGroup(($("#_"+groupId).next(".group_button")[0].id).substr(1), true, true);
+	
+	if ($("#"+groupId)[0].id == active_group) {
+		if ($("#_"+groupId).prev(".group_button")[0]) {
+			SetActiveGroup(($("#_"+groupId).prev(".group_button")[0].id).substr(1), true, true);
 		} else {
-			SetActiveGroup("tab_list", true, true);
+			if ($("#_"+groupId).next(".group_button")[0]) {
+				SetActiveGroup(($("#_"+groupId).next(".group_button")[0].id).substr(1), true, true);
+			} else {
+				SetActiveGroup("tab_list", true, true);
+			}
 		}
 	}
-	chrome.runtime.sendMessage({command: "save_groups", groups: bggroups, windowId: CurrentWindowId});
+	SaveGroups();
 	$("#"+groupId).remove();
 	$("#_"+groupId).remove();
 	schedule_update_data++;
@@ -94,44 +124,53 @@ function GroupRemove(groupId, close_tabs) {
 
 function UpdateBgGroupsOrder() {
 	$(".group_button").each(function() {
-		bggroups[(this.id).substr(1)].index = $(this).index();
+		if (bggroups[(this.id).substr(1)]) {
+			bggroups[(this.id).substr(1)].index = $(this).index();
+		}
 	});
-	chrome.runtime.sendMessage({command: "save_groups", groups: bggroups, windowId: CurrentWindowId});
+	SaveGroups();
 }
 
 function SetActiveGroup(groupId, switch_to_active_in_group, scroll_to_active) {
-	if ($("#"+groupId)[0] == undefined) {
-		return;
+	log("function: SetActiveGroup");
+	if ($("#"+groupId)[0]) {
+		active_group = groupId;
+		$(".group_button").removeClass("active_group");
+		$("#_"+groupId).addClass("active_group");
+		$(".tab, .group").hide();
+		$("#"+groupId).show();
+		$("#"+groupId+" .tab").show();
+		RefreshGUI();
+		$("#group_edit").hide();
+		if (switch_to_active_in_group && $("#"+groupId+" .active_tab")[0]){
+			chrome.tabs.update(parseInt($("#"+groupId+" .active_tab")[0].id), {active: true});
+		}
+		if (scroll_to_active && $("#"+groupId+" .active_tab")[0]){
+			ScrollToTab($("#"+groupId+" .active_tab")[0].id);
+		}
+		if (groupId == "tab_list") {
+			$("#button_remove_group, #button_edit_group").addClass("disabled");
+		} else {
+			$("#button_remove_group, #button_edit_group").removeClass("disabled");
+		}
+		chrome.runtime.sendMessage({command: "set_active_group", active_group: groupId, windowId: CurrentWindowId});
+		RefreshExpandStates();
+		RefreshCounters();
 	}
-	$(".group_button").removeClass("active_group");
-	$("#_"+groupId).addClass("active_group");
-	$(".tab, .group").hide();
-	$("#"+groupId).show();
-	$("#"+groupId+" .tab").show();
-	active_group = groupId;
-	RefreshGUI();
-	$("#group_edit").hide();
-	if (switch_to_active_in_group && $("#"+groupId+" .active")[0]){
-		chrome.tabs.update(parseInt($("#"+groupId+" .active")[0].id), {active: true});
-	}
-	if (scroll_to_active && $("#"+groupId+" .active")[0]){
-		ScrollToTab($("#"+groupId+" .active")[0].id);
-	}
-	if (groupId == "tab_list") {
-		$("#button_remove_group, #button_edit_group").addClass("disabled");
-	} else {
-		$("#button_remove_group, #button_edit_group").removeClass("disabled");
-	}
-	chrome.runtime.sendMessage({command: "set_active_group", active_group: groupId, windowId: CurrentWindowId});
 }
 
-function SetActiveTabInActiveGroup(tabId) {
-	if ($("#"+tabId).parents(".group")[0] && bggroups[active_group] != undefined) {
-		bggroups[$("#"+tabId).parents(".group")[0].id].activetab = parseInt(tabId);
-		if ($("#"+tabId).parents(".group")[0].id != active_group) {
-			SetActiveGroup($("#"+tabId).parents(".group")[0].id, false, true);
+function SetActiveTabInGroup(groupId, tabId) {
+	if ($(".tab#"+tabId)[0] /* && $("#"+tabId).parents(".group")[0] */ && bggroups[groupId] != undefined) {
+		// bggroups[$("#"+tabId).parents(".group")[0].id].active_tab = parseInt(tabId);
+		// if ($("#"+tabId).parents(".group")[0].id != active_group) {
+		if (groupId != active_group) {
+			// SetActiveGroup($("#"+tabId).parents(".group")[0].id, false, true);
+			SetActiveGroup(groupId, false, true);
 		}
-		chrome.runtime.sendMessage({command: "save_groups", groups: bggroups, windowId: CurrentWindowId});
+		if (bggroups[groupId]) {
+			bggroups[groupId].active_tab = parseInt(tabId);
+		}
+		SaveGroups();
 	}
 }
 
@@ -159,21 +198,25 @@ function SetActiveTabInActiveGroup(tabId) {
 // }
 
 // Edit group popup
-function ShowGroupEditWindow(GroupId) {
-	$("#group_edit_name")[0].value = bggroups[GroupId].name;
-	$("#group_edit").css({"display": "block", "top": $("#toolbar_groups").offset().top + 8, "left": 22});
-	$("#group_edit_font").css({"background-color": bggroups[GroupId].font == "" ? "var(--button_icons, #808080)" : "#"+bggroups[GroupId].font});
+function ShowGroupEditWindow() {
+	if (bggroups[menuItemId]) {
+		$("#group_edit_name")[0].value = bggroups[menuItemId].name;
+		$("#group_edit").css({"display": "block", "top": $("#toolbar_groups").offset().top + 8, "left": 22});
+		$("#group_edit_font").css({"background-color": bggroups[menuItemId].font == "" ? "var(--button_icons, #808080)" : "#"+bggroups[menuItemId].font});
+	}
 }
 
 // when pressed OK in group popup
 function GroupEditConfirm() {
-	$("#group_edit_name")[0].value = $("#group_edit_name")[0].value.replace(/[\f\n\r\v\t\<\>\+\-\(\)\.\,\;\:\~\/\|\?\@\!\"\'\£\$\%\&\^\#\=\*\[\]]?/gi, "");
-	bggroups[active_group].name = $("#group_edit_name")[0].value;
-	bggroups[active_group].font = RGBtoHex($("#group_edit_font").css("background-color"));
-	$("#group_edit").hide(0);
-	$(".group_title#_gte" +active_group).css({"color": "#"+bggroups[active_group].font});
-	RefreshGUI();
-	chrome.runtime.sendMessage({command: "save_groups", groups: bggroups, windowId: CurrentWindowId});
+	if (bggroups[menuItemId]) {
+		$("#group_edit_name")[0].value = $("#group_edit_name")[0].value.replace(/[\f\n\r\v\t\<\>\+\-\(\)\.\,\;\:\~\/\|\?\@\!\"\'\£\$\%\&\^\#\=\*\[\]]?/gi, "");
+		bggroups[menuItemId].name = $("#group_edit_name")[0].value;
+		bggroups[menuItemId].font = RGBtoHex($("#group_edit_font").css("background-color"));
+		$(".edit_dialog").hide(0);
+		$(".group_title#_gte" +menuItemId).css({"color": "#"+bggroups[menuItemId].font});
+		RefreshGUI();
+		SaveGroups();
+	}
 }
 
 // "Move to group" popup
@@ -216,8 +259,8 @@ function RestoreStateOfGroupsToolbar() {
 function SetGroupEvents() {
 			
 	// activate group
-	$(document).on("mousedown", ".group_button", function(event) {
-		menuGroupId = (this.id).substr(1);
+	$(document).on("click", ".group_button", function(event) {
+		// menuGroupId = (this.id).substr(1);
 		if (event.button == 0) {
 			SetActiveGroup((this.id).substr(1), true, true);
 		}
@@ -241,7 +284,7 @@ function SetGroupEvents() {
 
 	// edit group dialog box
 	$(document).on("mousedown", "#group_edit_discard", function(event) {
-		$("#group_edit").hide(0);
+		$(".edit_dialog").hide(0);
 	});
 	$("#group_edit_name").keyup(function(e) {
 		if (e.keyCode == 13) {
@@ -269,7 +312,8 @@ function SetGroupEvents() {
 	// edit group
 	$(document).on("dblclick", ".group_button:not(#_tab_list)", function(event) {
 		if (event.button == 0) {
-			ShowGroupEditWindow((this.id).substr(1));
+			menuItemId = (this.id).substr(1);
+			ShowGroupEditWindow();
 		}
 	});
 
@@ -287,7 +331,7 @@ function SetGroupEvents() {
 	// remove tabs from group button
 	// $(document).on("mousedown", "#remove_tabs_from_group", function(event) {
 		// if (event.button == 0 && vt.ActiveGroup.match("at|ut") == null) {
-			// AppendTabsToGroup({tabsIds: $(".tab.selected:visible").map(function() {return parseInt(this.id);}).toArray(), groupId: "ut", SwitchTabIfHasActive: true, insertAfter: true, moveTabs: true});
+			// AppendTabsToGroup({tabsIds: $(".tab.selected_tab:visible").map(function() {return parseInt(this.id);}).toArray(), groupId: "ut", SwitchTabIfHasActive: true, insertAfter: true, moveTabs: true});
 		// }
 	// });
 

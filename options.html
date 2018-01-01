@@ -67,6 +67,11 @@
 					<td style="position:relative;left:2px;width:3px;">-</td>
 					<td class="label" id="options_show_counter_groups"></td>
 				</tr>
+				<tr>
+					<td><input type="checkbox" class="opt_checkbox bg_opt" id="syncro_tabbar_groups_tabs_order"></input></td>
+					<td style="position:relative;left:2px;width:3px;">-</td>
+					<td class="label" id="options_syncro_tabbar_groups_tabs_order"></td>
+				</tr>
 			</table>
 		</fieldset>
 
@@ -151,6 +156,7 @@
 					<select id="append_child_tab">
 						<option class="bg_opt_drop_down_menu" id="options_append_child_tab_top" value="top"></option>
 						<option class="bg_opt_drop_down_menu" id="options_append_child_tab_bottom" value="bottom"></option>
+						<option class="bg_opt_drop_down_menu" id="options_append_child_tab_after_active" value="after_active"></option>
 					</select>
 				</li>
 				<li>
@@ -167,6 +173,8 @@
 					<select id="after_closing_active_tab">
 						<option class="bg_opt_drop_down_menu" id="options_after_closing_active_tab_go_up" value="above"></option>
 						<option class="bg_opt_drop_down_menu" id="options_after_closing_active_tab_go_down" value="below"></option>
+						<option class="bg_opt_drop_down_menu" id="options_after_closing_active_tab_go_up_seek_in_parent" value="above_seek_in_parent"></option>
+						<option class="bg_opt_drop_down_menu" id="options_after_closing_active_tab_go_down_seek_in_parent" value="below_seek_in_parent"></option>
 						<option class="bg_opt_drop_down_menu" id="options_after_closing_active_tab_go_browser" value="browser"></option>
 					</select>
 				</li>
@@ -194,15 +202,17 @@
 		
 		<fieldset class="field" id="field_theme" style="width:850px;">
 			<legend class="label" id="options_theme"></legend>
-			
+		
 			<select id="theme_list" style="padding-right:6px;"></select>
 			<input type="text" id="new_theme_name" name="untitled" value="untitled"></input>
-			<button class="set_button" type="button" id="options_rename_theme_button" style="margin:10px;">Rename</button>
-			<button class="set_button" type="button" id="options_add_theme_button" style="margin:10px;">Add new</button>
-			<button class="set_button" type="button" id="options_remove_theme_button" style="margin:10px;">Remove</button>
-			<button class="set_button" type="button" id="options_import_theme_button" style="margin:10px;">Import</button>
-			<button class="set_button" type="button" id="options_export_theme_button" style="margin:10px;">Export</button>
-							
+			<button class="set_button" type="button" id="options_rename_theme_button" style="margin:6px;">Rename</button>
+			<button class="set_button" type="button" id="options_add_theme_button" style="margin:6px;">Add new</button>
+			<button class="set_button" type="button" id="options_remove_theme_button" style="margin:6px;">Remove</button>
+			<button class="set_button" type="button" id="options_import_theme_button" style="margin:6px;">Import</button>
+			<button class="set_button" type="button" id="options_export_theme_button" style="margin:6px;">Export</button>
+			<button class="set_button" type="button" id="options_share_theme_link" style="margin:6px;">Export</button>
+			<br>
+			<br>
 			<fieldset class="field" id="field_show_toolbar" style="position: relative; width:816px;">
 				<legend id="toolbar_legend">
 					<input type="checkbox" style="position:relative; top:-1px;" id="show_toolbar"></input>
@@ -285,7 +295,10 @@
 				<div class="pick_col color_bucket" id="scrollbar_track"></div>
 
 				<div class="pin_list" id="pin_list"></div>
-				<div class="group" id="tab_list"></div>
+				<div class="group" id="tab_list">
+					<div class="children_folders" id="cftab_list"></div>
+					<div class="children_tabs" id="chtab_list"></div>
+				</div>
 				<div id="pin_list_scrollbar"><div id="pin_list_scrollbar_thumb"></div></div>
 				<div id="group_scrollbar"><div id="group_scrollbar_thumb"></div></div>
 				
@@ -354,6 +367,18 @@
 
 
 			</fieldset>
+		</fieldset>
+		
+		<fieldset class="field"">
+			<legend class="label" id="options_development"></legend>
+			<table style="display:inline-block;">
+				<tr>
+					<td><input type="checkbox" class="opt_checkbox bg_opt" id="debug"></input></td>
+					<td style="position:relative;left:2px;width:3px;">-</td>
+					<td class="label" id="options_debug"></td>
+				</tr>
+			</table>
+
 		</fieldset>
 		
 		<button class="set_button" type="button" id="options_clear_data" style="margin:10px;"></button>

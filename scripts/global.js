@@ -4,41 +4,42 @@
 
 // **********         GLOBAL VARIABLES FOR BACKGROUND, OPTIONS AND SIDEBAR         ***************
 
-
 var running = false;
-var schedule_save = 0;
-var schedule_update_indexes = 0;
+var schedule_save = -999;
+var schedule_update_data = 0;
 var schedule_rearrange_tabs = 0;
+var schedule_rearrange_reverse = false;
 var windows = {};
 var tabs = {};
-
 var MouseHoverOver = "";
-
-
-var DragAndDrop = {timeout: false, DragNode: undefined, DragNodeClass: "", SelectedTabsIds: [], TabsIds: [], Parents: [], ComesFromWindowId: 0, Depth: 0};
-var DropTargetsInFront = false;
-
-
-var menuTabId = 0;
+var DragAndDrop = {
+	timeout: false,
+	DragNode: undefined,
+	DragNodeClass: "",
+	TabsIds: [],
+	TabsIdsParents: [],
+	TabsIdsSelected: [],
+	Folders: {},
+	FoldersSelected: [],
+	ComesFromWindowId: 0,
+	DroppedToWindowId: 0,
+	Depth: 0
+};
+var menuItemId = 0;
 var CurrentWindowId = 0;
 var SearchIndex = 0;
-var schedule_update_data = 0;
 var active_group = "tab_list";
 var PickColor = "";
-
 var opt = {};
 var browserId = navigator.userAgent.match("Opera") !== null ? "O" : ( navigator.userAgent.match("Vivaldi") !== null ? "V" : (navigator.userAgent.match("Firefox") !== null ? "F" : "C" )  );
-
 var bgtabs = {};
 var bggroups = {};
-
+var bgfolders = {};
 var caption_clear_filter = chrome.i18n.getMessage("caption_clear_filter");
 var caption_loading = chrome.i18n.getMessage("caption_loading");
 var caption_searchbox = chrome.i18n.getMessage("caption_searchbox");
-
 var caption_ungrouped_group = chrome.i18n.getMessage("caption_ungrouped_group");
 var caption_noname_group = chrome.i18n.getMessage("caption_noname_group");
-
 var DefaultToolbar =
 	'<div id=toolbar_main>'+
 		'<div class=button id=button_new><div class=button_img></div></div>'+
@@ -48,7 +49,7 @@ var DefaultToolbar =
 		'<div class=button id=button_tools><div class=button_img></div></div>'+
 		'<div class=button id=button_groups><div class=button_img></div></div>'+
 		'<div class=button id=button_backup><div class=button_img></div></div>'+
-		// '<div class=button id=button_folders><div class=button_img></div></div>'+
+		'<div class=button id=button_folders><div class=button_img></div></div>'+
 	'</div>'+
 	'<div class=toolbar_shelf id=toolbar_search>'+
 		'<div id=toolbar_search_input_box>'+
@@ -68,9 +69,9 @@ var DefaultToolbar =
 		'<div class=button id=button_downloads><div class=button_img></div></div>'+
 		'<div class=button id=button_history><div class=button_img></div></div>'+
 		'<div class=button id=button_settings><div class=button_img></div></div>'+
-		'<div class=button id=button_extensions><div class=button_img></div></div>'+
-		'<div class=button id=button_discard><div class=button_img></div></div>'
+		'<div class=button id=button_extensions><div class=button_img></div></div>'
 		: '')+
+		'<div class=button id=button_discard><div class=button_img></div></div>'+
 		'<div class=button id=button_move><div class=button_img></div></div>'+
 	'</div>'+
 	'<div class=toolbar_shelf id=toolbar_shelf_groups>'+
@@ -90,31 +91,54 @@ var DefaultToolbar =
 		'<div class=button id=button_load_bak2><div class=button_img></div></div>'+
 		'<div class=button id=button_load_bak3><div class=button_img></div></div>'
 		: '')+
+	'</div>'+
+	'<div class=toolbar_shelf id=toolbar_shelf_folders>'+
+		'<div class=button id=button_new_folder><div class=button_img></div></div>'+
+		'<div class=button id=button_remove_folder><div class=button_img></div></div>'+
+		'<div class=button id=button_edit_folder><div class=button_img></div></div>'+
 	'</div>';
-	// '<div class=toolbar_shelf id=toolbar_shelf_folders>'+
-	// '</div>'+
-	
-var DefaultTheme = { "ToolbarShow": true, "ColorsSet": {}, "TabsSizeSetNumber": 2, "theme_name": "untitled", "theme_version": 2, "toolbar": DefaultToolbar, "unused_buttons": "" };
-var DefaultPreferences = { "skip_load": false, "new_open_below": false, "pin_list_multi_row": false, "close_with_MMB": true, "always_show_close": false, "allow_pin_close": false, "append_child_tab": "bottom", "append_child_tab_after_limit": "after", "append_orphan_tab": "bottom", "after_closing_active_tab": "below", "close_other_trees": false, "promote_children": true, "promote_children_in_first_child": true, "open_tree_on_hover": true, "max_tree_depth": -1, "max_tree_drag_drop": true, "never_show_close": false, "switch_with_scroll": false, "syncro_tabbar_tabs_order": true, "show_counter_groups": true, "show_counter_tabs": true, "show_counter_tabs_hints": true, "groups_toolbar_default": true };
-
-
-
+var DefaultTheme = {
+	"ToolbarShow": true,
+	"ColorsSet": {},
+	"TabsSizeSetNumber": 2,
+	"theme_name": "untitled",
+	"theme_version": 2,
+	"toolbar": DefaultToolbar,
+	"unused_buttons": ""
+};
+var DefaultPreferences = {
+	"skip_load": false,
+	"pin_list_multi_row": false,
+	"close_with_MMB": true,
+	"always_show_close": false,
+	"allow_pin_close": false,
+	"append_child_tab": "bottom",
+	"append_child_tab_after_limit": "after",
+	"append_orphan_tab": "bottom",
+	"after_closing_active_tab": "below_seek_in_parent",
+	"close_other_trees": false,
+	"promote_children": true,
+	"promote_children_in_first_child": true,
+	"open_tree_on_hover": true,
+	"max_tree_depth": -1,
+	"max_tree_drag_drop": true,
+	"never_show_close": false,
+	"switch_with_scroll": false,
+	"syncro_tabbar_tabs_order": true,
+	"show_counter_groups": true,
+	"show_counter_tabs": true,
+	"show_counter_tabs_hints": true,
+	"groups_toolbar_default": true,
+	"syncro_tabbar_groups_tabs_order": true,
+	"debug": false
+};
+var theme = {
+	"TabsSizeSetNumber": 2,
+	"ToolbarShow": true,
+	"toolbar": DefaultToolbar
+};
 
 // *******************             GLOBAL FUNCTIONS                 ************************
-// function LoadData(KeyName, ExpectReturnDefaultType) {
-	// chrome.runtime.sendMessage({command: "load_data", K: KeyName, T: ExpectReturnDefaultType}, function(response) {
-		// return response;
-	// });
-// }
-function LoadData(KeyName, ExpectReturnDefaultType) {
-	var data = ExpectReturnDefaultType;
-	try {
-		data = JSON.parse(localStorage[KeyName]);
-		return data;
-	} catch(e) {
-		return ExpectReturnDefaultType;
-	}
-}
 
 // generate random id
 function GenerateRandomID(){
@@ -128,10 +152,41 @@ function RGBtoHex(color){
 }
 
 function HexToRGB(hex, alpha){
-hex = hex.replace('#', ''); let r = parseInt(hex.length == 3 ? hex.slice(0, 1).repeat(2) : hex.slice(0, 2), 16); let g = parseInt(hex.length == 3 ? hex.slice(1, 2).repeat(2) : hex.slice(2, 4), 16); let b = parseInt(hex.length == 3 ? hex.slice(2, 3).repeat(2) : hex.slice(4, 6), 16); if (alpha) { return 'rgba('+r+', '+g+', '+b+', '+alpha+')'; } else { return 'rgb('+r+', '+g+', '+b+')'; }
+	hex = hex.replace('#', '');
+	let r = parseInt(hex.length == 3 ? hex.slice(0, 1).repeat(2) : hex.slice(0, 2), 16);
+	let g = parseInt(hex.length == 3 ? hex.slice(1, 2).repeat(2) : hex.slice(2, 4), 16);
+	let b = parseInt(hex.length == 3 ? hex.slice(2, 3).repeat(2) : hex.slice(4, 6), 16);
+	if (alpha) { return 'rgba('+r+', '+g+', '+b+', '+alpha+')'; } else { return 'rgb('+r+', '+g+', '+b+')'; }
 }
 
 
+function GetCurrentTheme() {
+	chrome.storage.local.get(null, function(items) {
+		if (items["current_theme"] && items["themes"] && items["themes"][items["current_theme"]]) {
+			theme = items["themes"][items["current_theme"]];
+		} else {
+			theme = Object.assign({}, DefaultTheme);
+		}
+	});
+}
+function ApplyTheme(theme) {
+	RestoreStateOfGroupsToolbar();
+	ApplySizeSet(theme["TabsSizeSetNumber"]);
+	ApplyColorsSet(theme["ColorsSet"]);
+	if (theme.ToolbarShow) {
+		if (theme.theme_version == DefaultTheme.theme_version) {
+			$("#toolbar").html(theme.toolbar);
+			if (browserId == "F") {
+				$(".button#button_load_bak1, .button#button_load_bak2, .button#button_load_bak3").remove();
+			}
+		} else {
+			$("#toolbar").html(DefaultToolbar);
+		}
+	}	
+	RestoreToolbarShelf();
+	RestoreToolbarSearchFilter();
+	Loadi18n();
+}
 /* theme colors is an object with css variables (but without --), for example; {"button_background": "#f2f2f2", "filter_box_border": "#cccccc"} */
 function ApplyColorsSet(ThemeColors){
 	let css_variables = "";
@@ -157,7 +212,7 @@ function ApplySizeSet(size){
 		}
 	}
 	if (browserId == "F") {
-		// I have no idea what is going on, but why top position for various things is different in firefox?????
+		// for some reason top position for various things is different in firefox?????
 		if (size > 1) {
 			document.styleSheets[document.styleSheets.length-1].insertRule(".tab_header>.tab_title { margin-top: -1px; }", document.styleSheets[document.styleSheets.length-1].cssRules.length);
 		} else {
@@ -167,27 +222,26 @@ function ApplySizeSet(size){
 }
 
 function LoadPreferences() {
-	var	LoadedPreferences = LoadData("preferences", {});
-
-	for (var parameter in DefaultPreferences) {
-		opt[parameter] = DefaultPreferences[parameter];
-	}
-	for (var parameter in LoadedPreferences) {
-		if (opt[parameter] != undefined) {
-			opt[parameter] = LoadedPreferences[parameter];
+	opt = Object.assign({}, DefaultPreferences);
+	chrome.storage.local.get(null, function(items) {
+		if (items["preferences"]) {
+			for (var parameter in items["preferences"]) {
+				if (opt[parameter] != undefined) {
+					opt[parameter] = items["preferences"][parameter];
+				}
+			}
 		}
-	}
+	});
 }
 function LoadDefaultPreferences() {
-	for (var parameter in DefaultPreferences) {
-		opt[parameter] = DefaultPreferences[parameter];
-	}
+	opt = Object.assign({}, DefaultPreferences);
 }
 function SavePreferences() {
-	localStorage["preferences"] = JSON.stringify(opt);
-	setTimeout(function() {
-		chrome.runtime.sendMessage({command: "reload_options"});
-	}, 200);
+	chrome.runtime.sendMessage({command: "save_preferences", opt: opt}, function(response) {
+		setTimeout(function() {
+			chrome.runtime.sendMessage({command: "reload_options"});
+		}, 300);
+	});
 }
 function ShowOpenFileDialog(id, extension) {
 	let body = document.getElementById("body");
@@ -211,3 +265,9 @@ function SaveFile(filename, data) {
 	link.remove();
 }
 
+function log(m) {
+	if (opt.debug) {
+		console.log(m);
+	}
+	// chrome.runtime.sendMessage({command: "console_log", m: m});
+}

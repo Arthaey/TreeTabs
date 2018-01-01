@@ -13,7 +13,7 @@ function Loadi18n() {
 		$(this).text(chrome.i18n.getMessage(this.id));
 	});
 	// edit group dialog labels
-	$(".group_edit_button").each(function() {
+	$(".edit_dialog_button").each(function() {
 		$(this)[0].textContent = chrome.i18n.getMessage(this.id);
 	});
 }
@@ -26,24 +26,31 @@ function RestorePinListRowSettings() {
 	RefreshGUI();
 }
 function Run() {
-	LoadPreferences();
+	chrome.runtime.sendMessage({command: "is_bg_ready"}, function(response) {
+		setTimeout(function() {
+			if (response == true) {
+				Load();
+			} else {
+				Run();
+			}
+		},200);
+	});
+}
+function Load() {
 	chrome.windows.getCurrent({populate: false}, function(window) {
 		CurrentWindowId = window.id;
-		chrome.runtime.sendMessage({command: "is_bg_running"}, function(response) {
-			running = response;
+		chrome.runtime.sendMessage({command: "get_preferences"}, function(response) {
+			opt = Object.assign({}, response);
 			chrome.runtime.sendMessage({command: "get_browser_tabs"}, function(response) {
 				bgtabs = Object.assign({}, response);
-				chrome.runtime.sendMessage({command: "get_groups", windowId: CurrentWindowId}, function(response) {
-					bggroups = Object.assign({}, response);
-					chrome.runtime.sendMessage({command: "get_theme", windowId: CurrentWindowId}, function(response) {
-						theme = response;
-						setTimeout(function() {
-							if (opt != undefined && browserId != undefined && bgtabs != undefined && bggroups != undefined && running == true) {
-								Initialize();
-							} else {
-								Run();
-							}
-						},200);
+				chrome.runtime.sendMessage({command: "get_folders", windowId: CurrentWindowId}, function(response) {
+					bgfolders = Object.assign({}, response);
+					chrome.runtime.sendMessage({command: "get_groups", windowId: CurrentWindowId}, function(response) {
+						bggroups = Object.assign({}, response);
+						chrome.runtime.sendMessage({command: "get_theme", windowId: CurrentWindowId}, function(response) {
+							ApplyTheme(response);
+							Initialize();
+						});
 					});
 				});
 			});
@@ -51,46 +58,19 @@ function Run() {
 	});
 }
 function Initialize() {
-	// THEME
-	RestoreStateOfGroupsToolbar();
-	// var theme = LoadData(("theme"+localStorage["current_theme"]), {"TabsSizeSetNumber": 2, "ToolbarShow": true, "toolbar": DefaultToolbar});
-	// I have no idea what is going on in latest build, but why top position for various things is different in firefox?????
-	if (browserId == "F") {
-		if (theme.TabsSizeSetNumber > 1) {
-			document.styleSheets[document.styleSheets.length-1].insertRule(".tab_header>.tab_title { margin-top: -1px; }", document.styleSheets[document.styleSheets.length-1].cssRules.length);
-		}
-	}
-	ApplySizeSet(theme["TabsSizeSetNumber"]);
-	ApplyColorsSet(theme["ColorsSet"]);
-	if (theme.ToolbarShow) {
-		if (theme.theme_version == DefaultTheme.theme_version) {
-			$("#toolbar").html(theme.toolbar);
-			
-			if (browserId == "F") {
-				$(".button#button_load_bak1, .button#button_load_bak2, .button#button_load_bak3").remove();
-			}
-			
-		} else {
-			$("#toolbar").html(DefaultToolbar);
-		}
-	}
 	// APPEND GROUPS
-	AppendAllGroups();
+	AppendGroups(bggroups);
 	chrome.tabs.query({currentWindow: true}, function(tabs) {
-		// AddNewFolder();AddNewFolder();AddNewFolder();AddNewFolder();AddNewFolder();
+		// APPEND FOLDERS
+		AppendFolders(bgfolders);
 		// APPEND TABS
 		let tc = tabs.length;
 		for (var ti = 0; ti < tc; ti++) {
 			AppendTab({tab: tabs[ti], Append: true, SkipSetActive: true});
 		}
 		for (var ti = 0; ti < tc; ti++) {
-			if (bgtabs[tabs[ti].id] && !tabs[ti].pinned && $("#"+bgtabs[tabs[ti].id].parent)[0] && $("#"+bgtabs[tabs[ti].id].parent).is(".group")) {
-				$("#"+bgtabs[tabs[ti].id].parent).append($("#"+tabs[ti].id));
-			}
-		}
-		for (var ti = 0; ti < tc; ti++) {
 			if (bgtabs[tabs[ti].id] && !tabs[ti].pinned) {
-				if ($("#"+bgtabs[tabs[ti].id].parent).length > 0 && $("#"+bgtabs[tabs[ti].id].parent).is(".tab") && $("#"+tabs[ti].id).find($("#ch"+bgtabs[tabs[ti].id].parent)).length == 0) {
+				if ($("#"+bgtabs[tabs[ti].id].parent).length > 0 && $("#"+tabs[ti].id).find($("#ch"+bgtabs[tabs[ti].id].parent)).length == 0) {
 					$("#ch"+bgtabs[tabs[ti].id].parent).append($("#"+tabs[ti].id));
 				}
 			}
@@ -100,18 +80,17 @@ function Initialize() {
 				$("#"+tabs[ti].id).addClass(bgtabs[tabs[ti].id].expand);
 			}
 		}
-		// SET ACTIVE IN EACH GROUP
+		// SET ACTIVE TAB FOR EACH GROUP
 		for (var group in bggroups) {
-			if ($("#"+group+" #"+bggroups[group].activetab)[0]) {
-				$("#"+bggroups[group].activetab).addClass("active");
+			if ($("#"+group+" #"+bggroups[group].active_tab)[0]) {
+				$("#"+bggroups[group].active_tab).addClass("active_tab");
 			}
-		}
+		}				
 		chrome.runtime.sendMessage({command: "get_active_group", windowId: CurrentWindowId}, function(response) {
-			SetActiveGroup(response, true, true);
+			SetActiveGroup(response, false, true);
 		});
 		RearrangeTreeTabs(tabs, bgtabs, true);
-		RestoreToolbarShelf();
-		RestoreToolbarSearchFilter();
+		RearrangeFolders(true);
 		SetToolbarShelfToggle("mousedown");
 		StartChromeListeners();
 		SetIOEvents();
@@ -122,29 +101,40 @@ function Initialize() {
 		SetFolderEvents();
 		SetMenu();
 		SetDragAndDropEvents();
-		RearrangeBrowserTabsCheck();
-		Loadi18n();
+		if (opt.syncro_tabbar_tabs_order || opt.syncro_tabbar_groups_tabs_order) {
+			RearrangeBrowserTabs();
+		}
 		RestorePinListRowSettings();
+		if (browserId == "V") {
+			VivaldiRefreshMediaIcons();
+		}
+		
+		var SetActiveLoop = setInterval(function() {
+			log("SetActiveTab");
+			chrome.tabs.query({currentWindow: true, active: true}, function(tabs) {
+				if (tabs[0].pinned && $("#"+active_group+" .active_tab")[0]) {
+					SetActiveTab(tabs[0].id);
+				} else {
+					clearInterval(SetActiveLoop);
+				}
+			});
+		}, 1000);
+
 		setTimeout(function() {
 			RefreshExpandStates();
+			RefreshCounters();
 		}, 1000);
 		setTimeout(function() {
 			UpdateData();
 			delete bgtabs;
 			delete theme;
 		}, 5000);
-		if ($(".active:visible").length == 0) {
-			chrome.tabs.query({currentWindow: true, active: true}, function(tabs) {
-				if (tabs[0]) {
-					SetActiveTab(tabs[0].id);
-				}
+		if (browserId != "F") {
+			chrome.storage.local.get(null, function(items) {
+				if (Object.keys(items["windows_BAK1"]).length > 0) { $("#button_load_bak1").removeClass("disabled"); }
+				if (Object.keys(items["windows_BAK2"]).length > 0) { $("#button_load_bak2").removeClass("disabled"); }
+				if (Object.keys(items["windows_BAK3"]).length > 0) { $("#button_load_bak3").removeClass("disabled"); }
 			});
 		}
-		if (browserId == "V") {
-			VivaldiRefreshMediaIcons();
-		}
 	});			
-}
-function log(m) {
-	chrome.runtime.sendMessage({command: "console_log", m: m});
 }
