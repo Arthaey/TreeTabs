@@ -3,31 +3,41 @@
 // that can be found at https://creativecommons.org/licenses/by-nc-nd/4.0/
 
 function ExportGroup(filename) {
+	if (opt.debug) {
+		console.log("function: ExportGroup, filename "+filename);
+	}
 	let GroupToSave = { group: bggroups[active_group], folders: {}, tabs: [] };
-	let lastId = parseInt($("#"+active_group+" .tab").last()[0].id);
-	$("#"+active_group+" .folder").each(function() {
-		if (bgfolders[this.id]) {
-			GroupToSave.folders[this.id] = bgfolders[this.id];
+	document.querySelectorAll("#"+active_group+" .folder").forEach(function(s){
+		if (bgfolders[s.id]) {
+			GroupToSave.folders[s.id] = bgfolders[s.id];
 		}
-	})
-	$("#"+active_group+" .tab").each(function() {
-		chrome.tabs.get(parseInt(this.id), function(tab) {
-			if ((tab.url).startsWith("www") || (tab.url).startsWith("http") || (tab.url).startsWith("ftp")) {
-				(GroupToSave.tabs).push(
-					{
-						id: tab.id,
-						parent: $("#"+tab.id).parent().parent()[0].id,
-						index: $("#"+tab.id).index(),
-						expand: ($("#"+tab.id).is(".n") ? "n" : ($("#"+tab.id).is(".c") ? "c" : "o")),
-						url: tab.url
-					}
-				);
-			}
-			if (tab.id == lastId) {
-				SaveFile(filename, GroupToSave);
-			}
+	});
+	let Tabs = document.querySelectorAll("#"+active_group+" .tab");
+	if (Tabs.length > 0) {
+		let lastId = parseInt(Tabs[Tabs.length-1].id);
+		Tabs.forEach(function(s){
+			chrome.tabs.get(parseInt(s.id), function(tab) {
+				if ((tab.url).startsWith("www") || (tab.url).startsWith("http") || (tab.url).startsWith("ftp")) {
+					(GroupToSave.tabs).push(
+						{
+							id: tab.id,
+							parent: s.parentNode.parentNode.id,
+							index: Array.from(s.parentNode.children).indexOf(s),
+							expand: (s.classList.contains("c") ? "c" : (s.classList.contains("o") ? "o" : "")),
+							url: tab.url
+						}
+					);
+				}
+				
+				if (tab.id == lastId) {
+					// if (opt.debug) {
+						// console.log(GroupToSave);
+					// }
+					SaveFile(filename, GroupToSave);
+				}
+			});
 		});
-	})
+	}
 }
 function ImportGroup() {
 	let file = document.getElementById("file_import_group");
@@ -36,12 +46,12 @@ function ImportGroup() {
 	fr.readAsText(file.files[0]);
 	fr.onload = function() {
 		let data = fr.result;
-		file.remove();
+		file.parentNode.removeChild(file);
 		let LoadedGroup = JSON.parse(data);
 		let NewFolders = {};
 		let RefsTabs = {};
 		let NewTabs = [];
-		let NewGroupId = AddNewGroup({name: LoadedGroup.group.name, font: LoadedGroup.group.font});
+		let NewGroupId = AddNewGroup(LoadedGroup.group.name, LoadedGroup.group.font);
 		SetActiveGroup(NewGroupId, false, false);
 		for (var folder in LoadedGroup.folders) {
 			let newId = GenerateNewFolderID();
@@ -58,6 +68,13 @@ function ImportGroup() {
 					RefsTabs[Tab.id] = new_tab.id;
 					Tab.id = new_tab.id;
 					NewTabs.push(Tab);
+					setTimeout(function() {
+						let nt = document.getElementById(new_tab.id);
+						let NewGroupTabs = document.getElementById("ct"+NewGroupId);
+						if (nt != null && NewGroupTabs != null) {
+							NewGroupTabs.appendChild(nt);
+						}
+					}, 1000);
 				}
 				if (NewTabs.length == LoadedGroup.tabs.length-1) {
 					setTimeout(function() {
@@ -89,10 +106,10 @@ function ExportSession(filename) {
 				let ExportWindows = [];
 				w.forEach(function(CWin) {
 					if (CWin.tabs.length > 0) {
-						if (CWin.tabs.length > 100 && warn) {
-							alert(chrome.i18n.getMessage("warning_exporting_big_amount_of_tabs"));
-							warn = false;
-						}
+						// if (CWin.tabs.length > 100 && warn) {
+							// alert(chrome.i18n.getMessage("warning_exporting_big_amount_of_tabs"));
+							// warn = false;
+						// }
 						windows[CWin.id]["id"] = CWin.id;
 						windows[CWin.id]["tabs"] = [];
 						CWin.tabs.forEach(function(CTab) {
@@ -115,10 +132,10 @@ function ImportSession() {
 	fr.readAsText(file.files[file.files.length-1]);
 	fr.onload = function() {
 		let data = fr.result;
-		file.remove();
+		file.parentNode.removeChild(file);
 		let LoadedWindows = JSON.parse(data);
 		let RefsTabs = {};
-		log(LoadedWindows);
+		if (opt.debug) console.log(LoadedWindows);
 		LoadedWindows.forEach(function(LWin) {
 			let NewTabs = [];
 			let urls = [];
@@ -152,15 +169,15 @@ function ImportSession() {
 	}	 
 }
 function RearrangeTreeStructure(groups, folders, tabs) { // groups and folders are in object, just like bggroups and bgfolders, but tabs are in array of bgtreetabs objects
-	log("function: RearrangeTreeStructure");
+	if (opt.debug) console.log("function: RearrangeTreeStructure");
 	chrome.tabs.query({currentWindow: true}, function(ChromeTabs) {
-		if (Object.keys(groups).length > 0) {
+		if (groups && Object.keys(groups).length > 0) {
 			for (var group in groups) {
 				bggroups[groups[group].id] = Object.assign({}, groups[group]);
 			}
 			AppendGroups(bggroups);
 		}
-		if (Object.keys(folders).length > 0) {
+		if (folders && Object.keys(folders).length > 0) {
 			for (var folder in folders) {
 				bgfolders[folders[folder].id] = Object.assign({}, folders[folder]);
 			}
@@ -171,9 +188,13 @@ function RearrangeTreeStructure(groups, folders, tabs) { // groups and folders a
 			if (Tab.parent == "pin_list") {
 				chrome.tabs.update(Tab.id, {pinned: true});
 			}
-			if ($("#"+Tab.id)[0] && $("#ch"+Tab.parent)[0]) {
-				$("#ch"+Tab.parent).append($("#"+Tab.id));
-				$("#"+Tab.id).addClass(Tab.expand);
+			let tb = document.getElementById(Tab.id);
+			let tbp = document.getElementById("ct"+Tab.parent);
+			if (tb != null && tbp != null) {
+				tbp.appendChild(tb);
+				if (Tab.expand != "") {
+					tb.classList.add(Tab.expand);
+				}
 			}
 			bgtabs[Tab.id] = {index: Tab.index, parent: Tab.parent, expand: Tab.expand};
 		});
@@ -189,21 +210,21 @@ function RearrangeTreeStructure(groups, folders, tabs) { // groups and folders a
 	});
 }
 function ImportMergeTabs() {
-	log("function: ImportMergeTabs");
+	if (opt.debug) console.log("function: ImportMergeTabs");
 	let file = document.getElementById("file_import_merge_backup");
 	let fr = new FileReader();
 	if (file.files[0] == undefined) return;
 	fr.readAsText(file.files[0]);
 	fr.onload = function() {
 		let data = fr.result;
-		file.remove();
+		file.parentNode.removeChild(file);
 		let lw = JSON.parse(data);
 		let RefsWins = {};
 		let RefsTabs = {};
 		for (let LWI = 0; LWI < lw.length; LWI++) { // clear previous window ids
 			lw[LWI].id = "";
 		}
-		log(lw);
+		if (opt.debug) console.log(lw);
 		chrome.windows.getAll({windowTypes: ['normal'], populate: true}, function(cw) {
 			for (let CWI = 0; CWI < cw.length; CWI++) { // loop Windows
 				for (let LWI = 0; LWI < lw.length; LWI++) { // loop Loaded Windows
@@ -219,17 +240,17 @@ function ImportMergeTabs() {
 							}
 						}
 					}
-					log(tabsMatch);
+					if (opt.debug) console.log(tabsMatch);
 					if (tabsMatch > lw[LWI].tabs.length*0.8) {
 						lw[LWI].id = cw[CWI].id;
 						break;
 					}
 				}
 			}
-			log(lw);
+			if (opt.debug) console.log(lw);
 			lw.forEach(function(w) {
 				if (w.id == "") { // missing window, lets make one
-					log("missing window");
+					if (opt.debug) console.log("missing window");
 					let NewTabs = [];
 					let urls = [];
 					(w.tabs).forEach(function(Tab) {
@@ -261,7 +282,7 @@ function ImportMergeTabs() {
 				}
 				else
 				{ // window exists, lets add missing tabs
-					log("window exists");
+					if (opt.debug) console.log("window exists");
 					let NewTabs = [];
 					(w.tabs).forEach(function(Tab) {
 						if (Tab.url != "") { // missing tab, lets make one

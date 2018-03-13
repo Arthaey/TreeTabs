@@ -11,25 +11,24 @@ var schedule_rearrange_tabs = 0;
 var schedule_rearrange_reverse = false;
 var windows = {};
 var tabs = {};
-var MouseHoverOver = "";
+var tt_ids = {};
 var DragAndDrop = {
 	timeout: false,
-	DragNode: undefined,
+	Depth: 0,
+	// DragNode: undefined,
 	DragNodeClass: "",
 	TabsIds: [],
 	TabsIdsParents: [],
 	TabsIdsSelected: [],
 	Folders: {},
 	FoldersSelected: [],
-	ComesFromWindowId: 0,
-	DroppedToWindowId: 0,
-	Depth: 0
+	ComesFromWindowId: undefined,
+	DroppedToWindowId: 0
 };
-var menuItemId = 0;
+var menuItemNode;
 var CurrentWindowId = 0;
 var SearchIndex = 0;
 var active_group = "tab_list";
-var PickColor = "";
 var opt = {};
 var browserId = navigator.userAgent.match("Opera") !== null ? "O" : ( navigator.userAgent.match("Vivaldi") !== null ? "V" : (navigator.userAgent.match("Firefox") !== null ? "F" : "C" )  );
 var bgtabs = {};
@@ -40,7 +39,7 @@ var caption_loading = chrome.i18n.getMessage("caption_loading");
 var caption_searchbox = chrome.i18n.getMessage("caption_searchbox");
 var caption_ungrouped_group = chrome.i18n.getMessage("caption_ungrouped_group");
 var caption_noname_group = chrome.i18n.getMessage("caption_noname_group");
-var DefaultToolbar =
+const DefaultToolbar =
 	'<div id=toolbar_main>'+
 		'<div class=button id=button_new><div class=button_img></div></div>'+
 		'<div class=button id=button_pin><div class=button_img></div></div>'+
@@ -71,8 +70,8 @@ var DefaultToolbar =
 		'<div class=button id=button_settings><div class=button_img></div></div>'+
 		'<div class=button id=button_extensions><div class=button_img></div></div>'
 		: '')+
-		'<div class=button id=button_discard><div class=button_img></div></div>'+
-		'<div class=button id=button_move><div class=button_img></div></div>'+
+		'<div class=button id=button_unload><div class=button_img></div></div>'+
+		'<div class=button id=button_detach><div class=button_img></div></div>'+
 	'</div>'+
 	'<div class=toolbar_shelf id=toolbar_shelf_groups>'+
 		'<div class=button id=button_groups_toolbar_hide><div class=button_img></div></div>'+
@@ -101,28 +100,30 @@ var DefaultTheme = {
 	"ToolbarShow": true,
 	"ColorsSet": {},
 	"TabsSizeSetNumber": 2,
+	"TabsMargins": "2",
 	"theme_name": "untitled",
-	"theme_version": 2,
+	"theme_version": 3,
 	"toolbar": DefaultToolbar,
 	"unused_buttons": ""
 };
 var DefaultPreferences = {
 	"skip_load": false,
-	"pin_list_multi_row": false,
-	"close_with_MMB": true,
+	"pin_list_multi_row": true,
 	"always_show_close": false,
+	"never_show_close": false,
 	"allow_pin_close": false,
 	"append_child_tab": "bottom",
 	"append_child_tab_after_limit": "after",
 	"append_orphan_tab": "bottom",
 	"after_closing_active_tab": "below_seek_in_parent",
-	"close_other_trees": false,
+	"collapse_other_trees": false,
+	"open_tree_on_hover": true,
 	"promote_children": true,
 	"promote_children_in_first_child": true,
-	"open_tree_on_hover": true,
 	"max_tree_depth": -1,
+	// "max_tree_depth_folders": 0,
 	"max_tree_drag_drop": true,
-	"never_show_close": false,
+	"max_tree_drag_drop_folders": false,
 	"switch_with_scroll": false,
 	"syncro_tabbar_tabs_order": true,
 	"show_counter_groups": true,
@@ -130,10 +131,17 @@ var DefaultPreferences = {
 	"show_counter_tabs_hints": true,
 	"groups_toolbar_default": true,
 	"syncro_tabbar_groups_tabs_order": true,
+	"midclick_tab": "close_tab",
+	"dbclick_tab": "new_tab",
+	"dbclick_group": "new_tab",
+	"midclick_group": "nothing",
+	"midclick_folder": "nothing",
+	"dbclick_folder": "rename_folder",
 	"debug": false
 };
 var theme = {
 	"TabsSizeSetNumber": 2,
+	"TabsMargins": "2",
 	"ToolbarShow": true,
 	"toolbar": DefaultToolbar
 };
@@ -159,35 +167,69 @@ function HexToRGB(hex, alpha){
 	if (alpha) { return 'rgba('+r+', '+g+', '+b+', '+alpha+')'; } else { return 'rgb('+r+', '+g+', '+b+')'; }
 }
 
-
 function GetCurrentTheme() {
 	chrome.storage.local.get(null, function(items) {
 		if (items["current_theme"] && items["themes"] && items["themes"][items["current_theme"]]) {
 			theme = items["themes"][items["current_theme"]];
+			if (theme.theme_version == 1) {
+				theme["ColorsSet"]["scrollbar_height"] = theme.ScrollbarPinList + "px";
+				theme["ColorsSet"]["scrollbar_width"] = theme.ScrollbarTabList + "px";
+				theme["toolbar"] = DefaultToolbar;
+				theme["unused_buttons"] = "";
+			}
+			if (theme.theme_version == 2) {
+				SelectedTheme["TabsMargins"] = "2";
+			}
 		} else {
 			theme = Object.assign({}, DefaultTheme);
 		}
 	});
 }
+
 function ApplyTheme(theme) {
+	if (theme.theme_version == 1) {
+		theme["ColorsSet"]["scrollbar_height"] = theme.ScrollbarPinList + "px";
+		theme["ColorsSet"]["scrollbar_width"] = theme.ScrollbarTabList + "px";
+		theme["toolbar"] = DefaultToolbar;
+		theme["unused_buttons"] = "";
+	}
+	if (theme.theme_version == 2) {
+		theme["TabsMargins"] = "2";
+	}
 	RestoreStateOfGroupsToolbar();
 	ApplySizeSet(theme["TabsSizeSetNumber"]);
 	ApplyColorsSet(theme["ColorsSet"]);
-	if (theme.ToolbarShow) {
+	ApplyTabsMargins(theme["TabsMargins"]);
+	if (theme.ToolbarShow == true) {
+		SetToolbarEvents(true, false, false, "");
 		if (theme.theme_version == DefaultTheme.theme_version) {
-			$("#toolbar").html(theme.toolbar);
+			document.getElementById("toolbar").innerHTML = theme.toolbar;
 			if (browserId == "F") {
-				$(".button#button_load_bak1, .button#button_load_bak2, .button#button_load_bak3").remove();
+				document.querySelectorAll(".button#button_load_bak1, .button#button_load_bak2, .button#button_load_bak3").forEach(function(s){
+					s.parentNode.removeChild(s);
+				});
 			}
 		} else {
-			$("#toolbar").html(DefaultToolbar);
+			document.getElementById("toolbar").innerHTML = DefaultToolbar;
 		}
-	}	
-	RestoreToolbarShelf();
-	RestoreToolbarSearchFilter();
+		SetToolbarEvents(false, true, true, "mousedown");
+		RestoreToolbarShelf();
+		RestoreToolbarSearchFilter();
+	}	else {
+		document.getElementById("toolbar").innerHTML = "";
+		RefreshGUI();
+	}
+	
+	for (var groupId in bggroups) {
+		let groupTitle = document.getElementById("_gte"+groupId);
+		if (groupTitle != null && bggroups[groupId].font == "") {
+			groupTitle.style.color = "";
+		}
+	}
 	Loadi18n();
 }
-/* theme colors is an object with css variables (but without --), for example; {"button_background": "#f2f2f2", "filter_box_border": "#cccccc"} */
+
+// theme colors is an object with css variables (but without --), for example; {"button_background": "#f2f2f2", "filter_box_border": "#cccccc"}
 function ApplyColorsSet(ThemeColors){
 	let css_variables = "";
 	for (let css_variable in ThemeColors) {
@@ -221,21 +263,22 @@ function ApplySizeSet(size){
 	}
 }
 
-function LoadPreferences() {
-	opt = Object.assign({}, DefaultPreferences);
-	chrome.storage.local.get(null, function(items) {
-		if (items["preferences"]) {
-			for (var parameter in items["preferences"]) {
-				if (opt[parameter] != undefined) {
-					opt[parameter] = items["preferences"][parameter];
-				}
+function ApplyTabsMargins(size){
+	for (let si = 0; si < document.styleSheets.length; si++) {
+		if ((document.styleSheets[si].ownerNode.id).match("tabs_margin") != null) {
+			if (document.styleSheets[si].ownerNode.id == "tabs_margin_"+size) {
+				document.styleSheets.item(si).disabled = false;
+			} else {
+				document.styleSheets.item(si).disabled = true;
 			}
 		}
-	});
+	}
 }
+
 function LoadDefaultPreferences() {
 	opt = Object.assign({}, DefaultPreferences);
 }
+
 function SavePreferences() {
 	chrome.runtime.sendMessage({command: "save_preferences", opt: opt}, function(response) {
 		setTimeout(function() {
@@ -243,6 +286,7 @@ function SavePreferences() {
 		}, 300);
 	});
 }
+
 function ShowOpenFileDialog(id, extension) {
 	let body = document.getElementById("body");
 	let inp = document.createElement("input");
@@ -251,23 +295,43 @@ function ShowOpenFileDialog(id, extension) {
 	inp.accept = extension;
 	inp.style.display = "none";
 	body.appendChild(inp);
-	$("#"+id).click();
-}
-function SaveFile(filename, data) {
-	let d = JSON.stringify(data);
-	let body = document.getElementById("body");
-	let link = document.createElement("a");
-	link.target = "_self";
-	link.download = filename;
-	link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(d);
-	body.appendChild(link);
-	link.click();
-	link.remove();
+	inp.click();
+	return inp;
 }
 
-function log(m) {
-	if (opt.debug) {
-		console.log(m);
-	}
-	// chrome.runtime.sendMessage({command: "console_log", m: m});
+function SaveFile(filename, data) {
+	chrome.tabs.query({currentWindow: true, active: true}, function(activeTab) {
+		chrome.tabs.create({url: "download.html"}, function(tab) {
+			setTimeout(function() {
+				chrome.runtime.sendMessage({command: "show_save_file_dialog", currentTabId: activeTab[0].id, selfTabId: tab.id, data: data, filename: filename});
+			}, 100);
+		});
+	});
+}
+
+// function SaveFile(filename, data) {
+	// let file = new File([JSON.stringify(data)], filename, {type: "text/csv;charset=utf-8"} );
+	// let body = document.getElementById("body");
+	// let savelink = document.createElement("a");
+	// savelink.target = "_blank";
+	// savelink.style.display = "none";
+	// savelink.type = "file";
+	// savelink.download = filename;
+	// savelink.href = URL.createObjectURL(file);
+	// body.appendChild(savelink);
+	// savelink.click();
+	// savelink.parentNode.removeChild(savelink);
+// }
+
+function EmptyDragAndDrop() {
+	DragAndDrop.timeout = false;
+	DragAndDrop.DragNodeClass = "";
+	DragAndDrop.DroppedToWindowId = 0;
+	DragAndDrop.ComesFromWindowId = undefined;
+	DragAndDrop.Depth = 0;
+	DragAndDrop.TabsIds = [];
+	DragAndDrop.TabsIdsParents = [];
+	DragAndDrop.TabsIdsSelected = [];
+	DragAndDrop.Folders = {};
+	DragAndDrop.FoldersSelected = [];
 }
