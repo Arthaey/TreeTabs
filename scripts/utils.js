@@ -3,6 +3,82 @@
 // that can be found at https://creativecommons.org/licenses/by-nc-nd/4.0/
 
 
+function RecheckFirefox() {
+	chrome.tabs.query({pinned: false, currentWindow: true}, function(tabs) {
+		let last_tabId = tabs[tabs.length-1].id;
+		let p = [];
+		let p_tt = [];
+		let t_ref = {};
+		let t_ind = 0;
+		let ok = 0;
+		let ti = 0;
+		let tc = tabs.length;
+		for (ti = 0; ti < tc; ti++) {
+			let tabId = tabs[ti].id;
+			p.push("");
+			p_tt.push("");
+			let t = Promise.resolve(browser.sessions.getTabValue(tabId, "TTdata")).then(function(TabData) {
+				if (TabData != undefined) {
+					t_ref[TabData.ttid] = tabs[t_ind].id;
+					p_tt[t_ind] = TabData.parent_ttid;
+					p[t_ind] = TabData.parent;
+				}
+				t_ind++;
+				if (tabId == last_tabId) {
+					let i = 0;
+					for (i = 0; i < p.length; i++) {
+						if (t_ref[p_tt[i]]) {
+							p[i] = t_ref[p_tt[i]];
+						}						
+					}
+					for (i = 0; i < p.length; i++) {
+						let Tab = document.getElementById(tabs[i].id);
+						if (Tab && p[i] == Tab.parentNode.parentNode.id) {
+							ok++;
+						}
+					}
+					if (ok < tabs.length*0.5) {
+						if (opt.debug) {
+							log("emergency reload");
+						}
+						chrome.storage.local.set({emergency_reload: true});
+						chrome.runtime.sendMessage({command: "reload"});
+						chrome.runtime.sendMessage({command: "reload_sidebar"});
+						location.reload();
+					} else {
+						if (opt.debug) {
+							log("f: RecheckFirefox, ok");
+						}
+					}
+				}
+			});
+		}
+	});
+}
+
+
+function AppendToNode(Node, AppendNode) {
+	if (Node != null && AppendNode != null) {
+		AppendNode.appendChild(Node);
+	}
+}
+
+function InsterBeforeNode(Node, BeforeNode) {
+	if (Node != null && BeforeNode != null) {
+		BeforeNode.parentNode.insertBefore(Node, BeforeNode);
+	}
+}
+
+function InsterAfterNode(Node, AfterNode) {
+	if (Node != null && AfterNode != null) {
+		if (AfterNode.nextSibling != null) {
+			AfterNode.parentNode.insertBefore(Node, AfterNode.nextSibling);
+		} else {
+			AfterNode.parentNode.appendChild(Node);
+		}
+	}
+}
+
 function HideRenameDialogs() {
 	document.querySelectorAll(".edit_dialog").forEach(function(s){
 		s.style.display = "none";
@@ -33,9 +109,25 @@ function GetParentsBy2Classes(Node, ClassA, ClassB) {
 	return Parents;
 }
 
+// color in format "rgb(r,g,b)" or simply "r,g,b" (can have spaces, but must contain "," between values)
+function RGBtoHex(color){
+	color = color.replace(/[rgb(]|\)|\s/g, ""); color = color.split(","); return color.map(function(v){ return ("0"+Math.min(Math.max(parseInt(v), 0), 255).toString(16)).slice(-2); }).join("");
+}
+
+function HexToRGB(hex, alpha){
+	hex = hex.replace('#', '');
+	let r = parseInt(hex.length == 3 ? hex.slice(0, 1).repeat(2) : hex.slice(0, 2), 16);
+	let g = parseInt(hex.length == 3 ? hex.slice(1, 2).repeat(2) : hex.slice(2, 4), 16);
+	let b = parseInt(hex.length == 3 ? hex.slice(2, 3).repeat(2) : hex.slice(4, 6), 16);
+	if (alpha) { return 'rgba('+r+', '+g+', '+b+', '+alpha+')'; } else { return 'rgb('+r+', '+g+', '+b+')'; }
+}
 
 function GetSelectedFolders() {
-	if (opt.debug) console.log("function: GetSelectedFolders");
+	
+	if (opt.debug) {
+		log("f: GetSelectedFolders");
+	}
+	
 	let res = {Folders: {}, FoldersSelected: [], TabsIds: [], TabsIdsParents: []};
 	document.querySelectorAll("#"+active_group+" .selected_folder").forEach(function(s){
 		res.FoldersSelected.push(s.id);
@@ -50,12 +142,10 @@ function GetSelectedFolders() {
 			res.TabsIdsParents.push(tc.parentNode.id);
 		});
 	});
-	if (opt.debug) console.log(res);
 	return res;
 }
 
 function GetSelectedTabs() {
-	if (opt.debug) console.log("function: GetSelectedTabs");
 	// let res = {urls: [], TabsIds: [], TabsIdsParents: [], TabsIdsSelected: []};
 	let res = {TabsIds: [], TabsIdsParents: [], TabsIdsSelected: []};
 	document.querySelectorAll(".pin.selected_tab, #"+active_group+" .selected_tab").forEach(function(s){
@@ -77,7 +167,6 @@ function GetSelectedTabs() {
 			res.TabsIdsParents.push(tc.parentNode.id);
 		});
 	});
-	if (opt.debug) console.log(res);
 	return res;
 }
 

@@ -13,6 +13,8 @@ function RefreshFields() {
 		document.querySelectorAll("#scrollbar_size_indicator, #scrollbar_thumb, #scrollbar_thumb_hover, #scrollbar_track").forEach(function(s){
 			s.style.display = "none";
 		});
+	} else {
+		document.getElementById("firefox_option_hide_other_groups_tabs_firefox").style.display = "none";
 	}
 	if (browserId == "V") {
 		let WebPanelUrlBox = document.getElementById("url_for_web_panel");
@@ -25,11 +27,13 @@ function RefreshFields() {
 		document.querySelectorAll("#options_available_buttons, #sample_toolbar_block, #options_reset_toolbar_button").forEach(function(s){
 			s.style.display = "";
 		});
+		document.getElementById("options_toolbar_look").style.display = "";
 		document.getElementById("field_show_toolbar").style.height = "";
 	} else{
 		document.querySelectorAll("#options_available_buttons, #sample_toolbar_block, #options_reset_toolbar_button").forEach(function(s){
 			s.style.display = "none";
 		});
+		document.getElementById("options_toolbar_look").style.display = "none";
 		document.getElementById("field_show_toolbar").style.height = "6";
 	}
 }

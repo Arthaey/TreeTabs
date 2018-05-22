@@ -2,55 +2,58 @@
 // Use of this source code is governed by a Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) license
 // that can be found at https://creativecommons.org/licenses/by-nc-nd/4.0/
 
-if (browserId != "F") {
-	// ConvertLegacyStorage();
-	ChromeLoadTabs(0);
-	ChromeMessageListeners();
-}
+
 function ChromeLoadTabs(retry) {
 	chrome.windows.getAll({windowTypes: ['normal'], populate: true}, function(w) {
 		chrome.storage.local.get(null, function(storage) {
 			// LOAD PREFERENCES
-			opt = Object.assign({}, DefaultPreferences);
-			if (storage["preferences"]) {
-				for (var parameter in storage["preferences"]) {
-					if (opt[parameter] != undefined) {
-						opt[parameter] = storage["preferences"][parameter];
-					}
-				}
-			}
-			// LOAD THEME
-			if (storage["current_theme"] && storage["themes"] && storage["themes"][storage["current_theme"]]) {
-				theme = storage["themes"][storage["current_theme"]];
-			} else {
-				theme = Object.assign({}, DefaultTheme);
-			}
+			GetCurrentPreferences(storage);
+		
 			// load tabs and windows from storage
-			var refTabs = {};
-			var tabs_matched = 0;
-			var w_count = storage.w_count ? storage.w_count : 0;
-			var t_count = storage.t_count ? storage.t_count : 0;
-			var LoadedWindows = storage.windows ? storage.windows : [];
-			var LoadedTabs = storage.tabs ? storage.tabs : [];
+			let refTabs = {};
+			let tabs_matched = 0;
+			let w_count = storage.w_count ? storage.w_count : 0;
+			let t_count = storage.t_count ? storage.t_count : 0;
+			let LoadedWindows = storage.windows ? storage.windows : [];
+			let LoadedTabs = storage.tabs ? storage.tabs : [];
+
+			let bak = (1 + retry) <= 3 ? (1 + retry) : 3;
+
 			// if loaded tabs mismatch by 50%, then try to load back
-			if (LoadedTabs.length < t_count*0.5 || retry > 0) {
-				LoadedTabs = storage["tabs_BAK"+retry] ? storage["tabs_BAK"+retry] : [];
+			if (LoadedTabs.length < t_count*0.5) {
+				LoadedTabs = storage["tabs_BAK"+bak] ? storage["tabs_BAK"+bak] : [];
 			}
 			// if loaded windows mismatch, then try to load back
-			if (LoadedWindows.length < w_count || retry > 0) {
-				LoadedWindows =  storage["windows_BAK"+retry] ? storage["windows_BAK"+retry] : [];
+			if (LoadedWindows.length < w_count) {
+				LoadedWindows =  storage["windows_BAK"+bak] ? storage["windows_BAK"+bak] : [];
 			}
+
+			if (opt.debug == true) {
+				if (storage.debug_log != undefined) {
+					debug =  storage.debug_log;
+				}
+				if (retry == 0) {
+					pushlog("TreeTabs background start");
+				}
+			}
+
 			// CACHED COUNTS
-			var WinCount = w.length;
-			var LoadedWinCount = LoadedWindows.length;
-			var LoadedTabsCount = LoadedTabs.length;
-			for (var wIndex = 0; wIndex < WinCount; wIndex++) {
+			let WinCount = w.length;
+			let LoadedWinCount = LoadedWindows.length;
+			let LoadedTabsCount = LoadedTabs.length;
+			
+			let CurrentTabsCount = 0;
+			for (let wIndex = 0; wIndex < w.length; wIndex++) {
+				CurrentTabsCount += w[wIndex].tabs.length;
+			}
+			
+			for (let wIndex = 0; wIndex < WinCount; wIndex++) {
 				if (w[wIndex].tabs[0].url != "chrome://videopopout/") { // this is for opera for their extra video popup, which is weirdly queried as a "normal" window
 					let winId = w[wIndex].id;
 					let url1 = w[wIndex].tabs[0].url;
 					let url2 = w[wIndex].tabs[w[wIndex].tabs.length-1].url;
 					windows[winId] = {group_bar: opt.groups_toolbar_default, search_filter: "url", active_shelf: "", active_group: "tab_list", groups: {tab_list: {id: "tab_list", index: 0, active_tab: 0, prev_active_tab: 0, name: caption_ungrouped_group, font: ""}}, folders: {}};
-					for (var LwIndex = 0; LwIndex < LoadedWinCount; LwIndex++) {
+					for (let LwIndex = 0; LwIndex < LoadedWinCount; LwIndex++) {
 						if (LoadedWindows[LwIndex].url1 == url1 || LoadedWindows[LwIndex].url2 == url2) {
 							if (LoadedWindows[LwIndex].group_bar) { windows[winId].group_bar = LoadedWindows[LwIndex].group_bar; }
 							if (LoadedWindows[LwIndex].search_filter) { windows[winId].search_filter = LoadedWindows[LwIndex].search_filter; }
@@ -65,17 +68,18 @@ function ChromeLoadTabs(retry) {
 					}
 				}
 			}
-			for (var wIndex = 0; wIndex < WinCount; wIndex++) {
-				var TabsCount = w[wIndex].tabs.length;
-				for (var tabIndex = 0; tabIndex < TabsCount; tabIndex++) {
+			for (let wIndex = 0; wIndex < WinCount; wIndex++) {
+				let TabsCount = w[wIndex].tabs.length;
+				for (let tabIndex = 0; tabIndex < TabsCount; tabIndex++) {
 					ChromeHashURL(w[wIndex].tabs[tabIndex]);
 				}
 			}
+
 			if (opt.skip_load == false && LoadedTabs.length > 0) { // compare saved tabs from storage to current session tabs, but can be skipped if set in options
-				for (var wIndex = 0; wIndex < WinCount; wIndex++) { // match loaded tabs
-					var TabsCount = w[wIndex].tabs.length;
-					for (var tabIndex = 0; tabIndex < TabsCount; tabIndex++) {
-						for (var LtabIndex = 0; LtabIndex < LoadedTabsCount; LtabIndex++) {
+				for (let wIndex = 0; wIndex < WinCount; wIndex++) { // match loaded tabs
+					let TabsCount = w[wIndex].tabs.length;
+					for (let tabIndex = 0; tabIndex < TabsCount; tabIndex++) {
+						for (let LtabIndex = 0; LtabIndex < LoadedTabsCount; LtabIndex++) {
 							let tabId = w[wIndex].tabs[tabIndex].id;
 							if (LoadedTabs[LtabIndex].hash == tabs[tabId].hash && refTabs[LoadedTabs[LtabIndex].id] == undefined) {
 								refTabs[LoadedTabs[LtabIndex].id] = tabId;
@@ -90,15 +94,15 @@ function ChromeLoadTabs(retry) {
 					}
 				}
 				// replace parents tabIds for new ones, for that purpose refTabs was made before
-				for (var tabId in tabs) {
+				for (let tabId in tabs) {
 					if (refTabs[tabs[tabId].parent] != undefined) {
 						tabs[tabId].parent = refTabs[tabs[tabId].parent];
 					}
 				}
 			}
 			// replace active tab ids for each group using refTabs
-			for (var windowId in windows) {
-				for (var group in windows[windowId].groups) {
+			for (let windowId in windows) {
+				for (let group in windows[windowId].groups) {
 					if (refTabs[windows[windowId].groups[group].active_tab]) {
 						windows[windowId].groups[group].active_tab = refTabs[windows[windowId].groups[group].active_tab];
 					}
@@ -107,19 +111,59 @@ function ChromeLoadTabs(retry) {
 					}
 				}
 			}
-			// will try to find tabs for 3 times
-			if (opt.skip_load == true || retry > 2 || (tabs_matched > t_count*0.5)) {
-				schedule_save = 1;
+
+			if (opt.debug){
+				pushlog("ChromeLoadTabs, retry: "+retry);
+				pushlog("Current windows count is: "+w.length);
+				pushlog("Saved windows count is: "+LoadedWindows.length);
+				pushlog("Current tabs count is: "+CurrentTabsCount);
+				pushlog("Loaded tabs count is: "+LoadedTabsCount);
+				pushlog("Matching tabs: "+tabs_matched);
+				pushlog("Current windows:");
+				pushlog(w);
+			}
+
+			// will loop trying to find tabs
+			if (opt.skip_load == true || retry >= 5 || (tabs_matched > t_count*0.5)) {
 				running = true;
 				ChromeAutoSaveData(0, 1000);
 				ChromeAutoSaveData(1, 300000);
 				ChromeAutoSaveData(2, 600000);
 				ChromeAutoSaveData(3, 1800000);
 				ChromeListeners();
+
+				delete schedule_update_data;
+				delete schedule_rearrange_tabs;
+				delete DragNodeClass;
+				delete DragOverTimer;
+				delete DragTreeDepth;
+				delete menuItemNode;
+				delete CurrentWindowId;
+				delete SearchIndex;
+				delete active_group;
+				delete browserId;
+				delete bggroups;
+				delete bgfolders;
+				delete caption_clear_filter;
+				delete caption_loading;
+				delete caption_searchbox;
+				delete DefaultToolbar;
+				delete DefaultTheme;
+				delete DefaultPreferences;
+
+				delete newTabUrl;
+				delete EmptyTabs;
+
+				delete tt_ids;
+
+				schedule_save = -1; // 2 operations must be made to start saving data
 			} else {
+				if (opt.debug){
+					pushlog("Attempt "+retry+" failed, matched tabs was below 50%");
+				}
 				setTimeout(function() {
 					ChromeLoadTabs(retry+1);
-				}, 2000);
+				}, 5000);
 			}
 		});
 	});
@@ -133,21 +177,21 @@ async function ChromeAutoSaveData(BAK, LoopTimer) {
 		}
 		if (running && schedule_save > 0 && Object.keys(tabs).length > 1) {
 			chrome.windows.getAll({windowTypes: ['normal'], populate: true}, function(w) {
-				var WinCount = w.length;
-				var t_count = 0;
-				var counter = 0;
-				var Windows = [];
-				var Tabs = [];
-				for (var wIndex = 0; wIndex < WinCount; wIndex++) {
+				let WinCount = w.length;
+				let t_count = 0;
+				let counter = 0;
+				let Windows = [];
+				let Tabs = [];
+				for (let wIndex = 0; wIndex < WinCount; wIndex++) {
 					t_count += w[wIndex].tabs.length;
 				}
-				for (var wIndex = 0; wIndex < WinCount; wIndex++) {
+				for (let wIndex = 0; wIndex < WinCount; wIndex++) {
 					let winId = w[wIndex].id;
 					if (windows[winId] != undefined && windows[winId].group_bar != undefined && windows[winId].search_filter != undefined && windows[winId].active_shelf != undefined && windows[winId].active_group != undefined && windows[winId].groups != undefined && windows[winId].folders != undefined) {
 						Windows.push({url1: w[wIndex].tabs[0].url, url2: w[wIndex].tabs[w[wIndex].tabs.length-1].url, group_bar: windows[winId].group_bar, search_filter: windows[winId].search_filter, active_shelf: windows[winId].active_shelf, active_group: windows[winId].active_group, groups: windows[winId].groups, folders: windows[winId].folders});
 					}
 					let TabsCount = w[wIndex].tabs.length;
-					for (var tabIndex = 0; tabIndex < TabsCount; tabIndex++) {
+					for (let tabIndex = 0; tabIndex < TabsCount; tabIndex++) {
 						let tabId = w[wIndex].tabs[tabIndex].id;
 						if (tabs[tabId] != undefined && tabs[tabId].hash != undefined && tabs[tabId].parent != undefined && tabs[tabId].index != undefined && tabs[tabId].expand != undefined) {
 							Tabs.push({id: tabId, hash: tabs[tabId].hash, parent: tabs[tabId].parent, index: tabs[tabId].index, expand: tabs[tabId].expand});
@@ -182,20 +226,25 @@ async function ChromeAutoSaveData(BAK, LoopTimer) {
 				schedule_save--;
 			});
 		}
+
+		if (opt.debug == true) {
+			chrome.storage.local.set({debug_log: debug});
+		}
+
 	}, LoopTimer);
 }
 function ChromeHashURL(tab) {
 	if (tabs[tab.id] == undefined) {
 		tabs[tab.id] = {hash: 0, parent: tab.pinned ? "pin_list" : (windows[tab.windowId] ? windows[tab.windowId].active_group : "tab_list"), index: tab.index, expand: "n"};
 	}
-	var hash = 0;
-	for (var charIndex = 0; charIndex < tab.url.length; charIndex++) {
+	let hash = 0;
+	for (let charIndex = 0; charIndex < tab.url.length; charIndex++) {
 		hash += tab.url.charCodeAt(charIndex);
 	}
 	tabs[tab.id].hash = hash;
 }
 function ReplaceParents(oldTabId, newTabId) {
-	for (var tabId in tabs) {
+	for (let tabId in tabs) {
 		if (tabs[tabId].parent == oldTabId) {
 			tabs[tabId].parent = newTabId;
 		}
@@ -204,7 +253,7 @@ function ReplaceParents(oldTabId, newTabId) {
 function ChromeListeners() { // start all listeners
 	chrome.tabs.onCreated.addListener(function(tab) {
 		ChromeHashURL(tab);
-		chrome.runtime.sendMessage({command: "tab_created", windowId: tab.windowId, tab: tab, tabId: tab.id});
+		chrome.runtime.sendMessage({command: "tab_created", windowId: tab.windowId, tabId: tab.id});
 		schedule_save++;
 	});
 	chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
@@ -275,19 +324,9 @@ function ChromeListeners() { // start all listeners
 }	
 function ChromeMessageListeners() {
 	chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-		if (opt.debug) console.log("message to background:");
-		if (opt.debug) console.log(message);
+
 		if (message.command == "reload") {
 			window.location.reload();
-			return;
-		}
-		if (message.command == "get_preferences") {
-			sendResponse(opt);
-			return;
-		}
-		if (message.command == "save_preferences") {
-			opt = Object.assign({}, message.opt);
-			chrome.storage.local.set({preferences: message.opt});
 			return;
 		}
 		if (message.command == "get_windows") {
@@ -413,12 +452,8 @@ function ChromeMessageListeners() {
 			schedule_save++;
 			return;
 		}
-		if (message.command == "get_theme") {
-			sendResponse(theme);
-			return;
-		}
-		if (message.command == "reload_theme") {
-			GetCurrentTheme();
+		if (message.command == "debug") {
+			pushlog(message.log);
 			return;
 		}
 	});
