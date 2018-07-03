@@ -2,11 +2,12 @@
 // Use of this source code is governed by a Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) license
 // that can be found at https://creativecommons.org/licenses/by-nc-nd/4.0/
 
+
 function ExportGroup(groupId, filename, save_to_manager) {
-	let GroupToSave = { group: bggroups[groupId], folders: {}, tabs: [] };
+	let GroupToSave = { group: tt.groups[groupId], folders: {}, tabs: [] };
 	document.querySelectorAll("#" + groupId + " .folder").forEach(function(s) {
-		if (bgfolders[s.id]) {
-			GroupToSave.folders[s.id] = bgfolders[s.id];
+		if (tt.folders[s.id]) {
+			GroupToSave.folders[s.id] = tt.folders[s.id];
 		}
 	});
 	let Tabs = document.querySelectorAll("#" + groupId + " .tab");
@@ -50,7 +51,6 @@ function ExportGroup(groupId, filename, save_to_manager) {
 		}
 
 	}
-	
 }
 
 function ImportGroup(recreate_group, save_to_manager) {
@@ -93,7 +93,6 @@ function AddGroupToStorage(group, add_to_manager) {
 			}
 		}
 		if (opt.debug) {
-			// log("f: AddGroupToStorage, group: "+JSON.stringify(group)+", add_to_manager: "+add_to_manager);
 			log("f: AddGroupToStorage, add_to_manager: "+add_to_manager);
 		}
 	});
@@ -128,6 +127,11 @@ function RecreateGroup(LoadedGroup) {
 						NewGroupTabs.appendChild(nt);
 					}
 				}, 1000);
+				
+				if (browserId != "O") {
+					chrome.runtime.sendMessage({command: "discard_tab", tabId: new_tab.id});
+				}
+				
 			}
 			if (NewTabs.length == LoadedGroup.tabs.length - 1) {
 				setTimeout(function() {
@@ -143,13 +147,13 @@ function RecreateGroup(LoadedGroup) {
 						}
 					});
 					setTimeout(function() {
-						RearrangeTreeStructure({}, NewFolders, NewTabs);
+						RcreateTreeStructure({}, NewFolders, NewTabs);
 					}, 1000);
 					setTimeout(function() {
-						RearrangeTreeStructure({}, NewFolders, NewTabs);
+						RcreateTreeStructure({}, NewFolders, NewTabs);
 					}, 2000);
 					setTimeout(function() {
-						RearrangeTreeStructure({}, NewFolders, NewTabs);
+						RcreateTreeStructure({}, NewFolders, NewTabs);
 					}, 5000);
 				}, 2000);
 			}
@@ -157,7 +161,6 @@ function RecreateGroup(LoadedGroup) {
 	});
 	
 	if (opt.debug) {
-		// log("f: RecreateGroup, LoadedGroup: "+JSON.stringify(LoadedGroup)+", NewFolders: "+JSON.stringify(NewFolders)+", NewTabs: "+JSON.stringify(NewTabs));
 		log("f: RecreateGroup");
 	}
 	
@@ -165,14 +168,14 @@ function RecreateGroup(LoadedGroup) {
 
 
 function ExportSession(name, save_to_file, save_to_manager, save_to_autosave_manager) {
-	chrome.windows.getAll({ windowTypes: ['normal'], populate: true }, function(w) {
-		 chrome.runtime.sendMessage({ command: "get_browser_tabs" }, function(response) {
-				let tabs = Object.assign({}, response);
-				chrome.runtime.sendMessage({ command: "get_windows" }, function(response) {
-					let windows = Object.assign({}, response);
+	chrome.windows.getAll({ windowTypes: ['normal'], populate: true }, function(win) {
+		 chrome.runtime.sendMessage({ command: "get_browser_tabs" }, function(t) {
+				let tabs = Object.assign({}, t);
+				chrome.runtime.sendMessage({ command: "get_windows" }, function(w) {
+					let windows = Object.assign({}, w);
 					let warn = true;
 					let ExportWindows = [];
-					w.forEach(function(CWin) {
+					win.forEach(function(CWin) {
 						 if (CWin.tabs.length > 0) {
 								windows[CWin.id]["id"] = CWin.id;
 								windows[CWin.id]["tabs"] = [];
@@ -195,7 +198,6 @@ function ExportSession(name, save_to_file, save_to_manager, save_to_autosave_man
 					}
 
 					if (opt.debug) {
-						// log("f: ExportSession, name: "+name+", session: "+JSON.stringify(ExportWindows)+", save_to_file: "+save_to_file+", save_to_manager: "+save_to_manager+", save_to_autosave_manager: "+save_to_autosave_manager);
 						log("f: ExportSession, name: "+name+", save_to_file: "+save_to_file+", save_to_manager: "+save_to_manager+", save_to_autosave_manager: "+save_to_autosave_manager);
 					}
 
@@ -217,7 +219,6 @@ function ImportSession(recreate_session, save_to_manager, merge_session) {
 		let LoadedSession = JSON.parse(data);
 
 		if (opt.debug) {
-			// log("f: ImportSession, session: "+data+", recreate_session: "+recreate_session+", merge_session: "+merge_session);
 			log("f: ImportSession, recreate_session: "+recreate_session+", merge_session: "+merge_session);
 		}
 
@@ -253,7 +254,6 @@ function AddSessionToStorage(session, name, add_to_manager) {
 		}
 
 		if (opt.debug) {
-			// log("f: AddSessionToStorage, name: "+name+", add_to_manager: "+add_to_manager+", session: "+JSON.stringify(session));
 			log("f: AddSessionToStorage, name: "+name+", add_to_manager: "+add_to_manager);
 		}
 	});
@@ -276,19 +276,16 @@ function AddAutosaveSessionToStorage(session, name) {
 		}
 
 		if (opt.debug) {
-			// log("f: AddAutosaveSessionToStorage, name: "+name+", session: "+JSON.stringify(session));
 			log("f: AddAutosaveSessionToStorage, name: "+name);
 		}
 	});
 }
 
 
-
 function RecreateSession(LoadedSession) {
 	let RefsTabs = {};
 
 	if (opt.debug) {
-		// log("f: RecreateSession, session: "+JSON.stringify(LoadedSession));
 		log("f: RecreateSession");
 	}
 
@@ -296,83 +293,95 @@ function RecreateSession(LoadedSession) {
 		let NewTabs = [];
 		let urls = [];
 		(LWin.tabs).forEach(function(Tab) {
-				urls.push(Tab.url);
-				NewTabs.push(Tab);
+			urls.push(Tab.url);
+			NewTabs.push(Tab);
 		});
-		chrome.windows.create({ url: urls }, function(new_window) {
-				for (let tInd = 0; tInd < new_window.tabs.length; tInd++) {
-					RefsTabs[NewTabs[tInd].id] = new_window.tabs[tInd].id;
-					NewTabs[tInd].id = new_window.tabs[tInd].id;
+
+		chrome.windows.create({ url: urls   /* , discarded: true */ }, function(new_window) {
+			chrome.runtime.sendMessage({command: "save_groups", windowId: new_window.id, groups: LWin.groups});
+			chrome.runtime.sendMessage({command: "save_folders", windowId: new_window.id, folders: LWin.folders});
+			
+			for (let tInd = 0; tInd < new_window.tabs.length; tInd++) {
+				RefsTabs[NewTabs[tInd].id] = new_window.tabs[tInd].id;
+				NewTabs[tInd].id = new_window.tabs[tInd].id;
+			}
+			for (let tInd = 0; tInd < new_window.tabs.length; tInd++) {
+				if (RefsTabs[NewTabs[tInd].parent] != undefined) {
+					NewTabs[tInd].parent = RefsTabs[NewTabs[tInd].parent];
 				}
-				for (let tInd = 0; tInd < new_window.tabs.length; tInd++) {
-					if (RefsTabs[NewTabs[tInd].parent] != undefined) {
-						NewTabs[tInd].parent = RefsTabs[NewTabs[tInd].parent];
-					}
+			}
+			for (let tInd = 0; tInd < new_window.tabs.length; tInd++) {
+				if (NewTabs[tInd].parent == "pin_list") {
+					chrome.tabs.update(new_window.tabs[tInd].id, { pinned: true });
 				}
-				let HaveResponse;
-				let GiveUp = 0;
-				var Append = setInterval(function() {
-					chrome.runtime.sendMessage({ command: "remote_update", groups: LWin.groups, folders: LWin.folders, tabs: NewTabs, windowId: new_window.id }, function(response) {
-						HaveResponse = response;
-					});
-					if (HaveResponse || GiveUp > 900) {
-						clearInterval(Append);
-					}
-					GiveUp++;
-				}, 2000);
+				chrome.runtime.sendMessage({command: "update_tab", tabId: new_window.tabs[tInd].id, tab: {index: NewTabs[tInd].index, expand: NewTabs[tInd].expand, parent: NewTabs[tInd].parent}});
+	
+				// if (browserId != "O") {
+					// chrome.runtime.sendMessage({command: "discard_tab", tabId: new_window.tabs[tInd].id});
+				// }
+			}
+			
+			if (browserId != "O") {
+				setTimeout(function() {
+					chrome.runtime.sendMessage({command: "discard_window", windowId: new_window.id});
+				}, urls.length * 300);
+			}
+
 		});
 	});
 }
 
-
-function RearrangeTreeStructure(groups, folders, tabs) { // groups and folders are in object, just like bggroups and bgfolders, but tabs are in array of bgtreetabs objects
+// groups and folders are in object, just like tt.groups and tt.folders, but tabs are in array of treetabs objects
+function RcreateTreeStructure(groups, folders, tabs) {
 	if (opt.debug) {
-		log("f: RearrangeTreeStructure");
+		log("f: RcreateTreeStructure");
 	}
 
-	chrome.tabs.query({ currentWindow: true }, function(ChromeTabs) {
-		if (groups && Object.keys(groups).length > 0) {
-			for (var group in groups) {
-				bggroups[groups[group].id] = Object.assign({}, groups[group]);
-			}
-			AppendGroups(bggroups);
+	ShowStatusBar({show: true, spinner: true, message: "Quick check and recreating structure..."});
+	if (groups && Object.keys(groups).length > 0) {
+		for (var group in groups) {
+			tt.groups[groups[group].id] = Object.assign({}, groups[group]);
 		}
-		if (folders && Object.keys(folders).length > 0) {
-			for (var folder in folders) {
-				bgfolders[folders[folder].id] = Object.assign({}, folders[folder]);
-			}
-			AppendFolders(bgfolders);
+		AppendGroups(tt.groups);
+	}
+	if (folders && Object.keys(folders).length > 0) {
+		for (var folder in folders) {
+			tt.folders[folders[folder].id] = Object.assign({}, folders[folder]);
 		}
-		let bgtabs = {};
-		tabs.forEach(function(Tab) {
-			if (Tab.parent == "pin_list") {
-				chrome.tabs.update(Tab.id, { pinned: true });
-			}
+		AppendFolders(tt.folders);
+	}
+	let bgtabs = {};
+	tabs.forEach(function(Tab) {
+		if (Tab.parent == "pin_list") {
+			chrome.tabs.update(Tab.id, { pinned: true });
+		}
+		if (Tab.parent != "") {
 			let tb = document.getElementById(Tab.id);
 			let tbp = document.getElementById("ct" + Tab.parent);
-			if (tb != null && tbp != null) {
+			if (tb && tbp) {
 				tbp.appendChild(tb);
 				if (Tab.expand != "") {
 					tb.classList.add(Tab.expand);
 				}
 			}
 			bgtabs[Tab.id] = { index: Tab.index, parent: Tab.parent, expand: Tab.expand };
-		});
-		RearrangeTreeTabs(ChromeTabs, bgtabs, true);
-		RearrangeFolders(true);
-		UpdateBgGroupsOrder();
-		setTimeout(function() {
-			RefreshExpandStates();
-			RefreshCounters();
-			schedule_update_data++;
-			SaveFolders();
-		}, 1000);
+		}
 	});
+	RearrangeTreeTabs(bgtabs, false);
+	RearrangeFolders(true);
+	UpdateBgGroupsOrder();
+	setTimeout(function() {
+		RefreshExpandStates();
+		RefreshCounters();
+		tt.schedule_update_data++;
+		SaveFolders();
+	}, 3000);
+	// ShowStatusBar({show: true, spinner: true, message: "Sorting"});
+	// ShowStatusBar(false, "Wait just a little more...");
 }
 
 function ImportMergeTabs(LoadedSession) {
 	if (opt.debug) {
-		// log("f: ImportMergeTabs, session: "+JSON.stringify(LoadedSession));
 		log("f: ImportMergeTabs");
 	}
 	let RefsWins = {};
@@ -380,27 +389,34 @@ function ImportMergeTabs(LoadedSession) {
 	for (let LWI = 0; LWI < LoadedSession.length; LWI++) { // clear previous window ids
 		LoadedSession[LWI].id = "";
 	}
+	ShowStatusBar({show: true, spinner: true, message: "Loaded Tree structure..."});
 	chrome.windows.getAll({ windowTypes: ['normal'], populate: true }, function(cw) {
-		for (let CWI = 0; CWI < cw.length; CWI++) { // loop Windows
-			for (let LWI = 0; LWI < LoadedSession.length; LWI++) { // loop Loaded Windows
-				let tabsMatch = 0;
-				for (let CTI = 0; CTI < cw[CWI].tabs.length; CTI++) { // loop Tabs of each Current Window
-					for (let LTI = 0; LTI < LoadedSession[LWI].tabs.length; LTI++) { // loop Tabs of each Loaded Window
-						if (cw[CWI].tabs[CTI].url == LoadedSession[LWI].tabs[LTI].url) {
-							RefsTabs[LoadedSession[LWI].tabs[LTI].id] = cw[CWI].tabs[CTI].id;
-							LoadedSession[LWI].tabs[LTI].id = cw[CWI].tabs[CTI].id;
-							LoadedSession[LWI].tabs[LTI].url = "";
-							tabsMatch++;
-							break;
+		for (let CWI = 0; CWI < cw.length; CWI++) { // Current Windows
+		
+			for (let LWI = 0; LWI < LoadedSession.length; LWI++) { // Loaded Windows
+			
+				if (LoadedSession[LWI].id == "") {
+		
+					let tabsMatch = 0;
+					for (let CTI = 0; CTI < cw[CWI].tabs.length; CTI++) { // loop Tabs of CWI Window
+						for (let LTI = 0; LTI < LoadedSession[LWI].tabs.length; LTI++) { // loop Tabs of Loaded Window
+							if (cw[CWI].tabs[CTI].url == LoadedSession[LWI].tabs[LTI].url) {
+								RefsTabs[LoadedSession[LWI].tabs[LTI].id] = cw[CWI].tabs[CTI].id;
+								LoadedSession[LWI].tabs[LTI].id = cw[CWI].tabs[CTI].id;
+								LoadedSession[LWI].tabs[LTI].url = "";
+								tabsMatch++;
+								break;
+							}
 						}
 					}
-				}
-				if (opt.debug) {
-					log("f: ImportMergeTabs, tabsMatch: "+tabsMatch);
-				}
-				if (tabsMatch > LoadedSession[LWI].tabs.length * 0.6) {
-					LoadedSession[LWI].id = cw[CWI].id;
-					break;
+					if (opt.debug) {
+						log("f: ImportMergeTabs, tabsMatch: "+tabsMatch);
+					}
+					if (tabsMatch > LoadedSession[LWI].tabs.length * 0.6) {
+						LoadedSession[LWI].id = cw[CWI].id;
+						break;
+					}
+					
 				}
 			}
 		}
@@ -418,68 +434,122 @@ function ImportMergeTabs(LoadedSession) {
 					NewTabs.push(Tab);
 				});
 				chrome.windows.create({ url: urls }, function(new_window) {
+					chrome.runtime.sendMessage({command: "save_groups", windowId: new_window.id, groups: w.groups});
+					chrome.runtime.sendMessage({command: "save_folders", windowId: new_window.id, folders: w.folders});
+					
 					for (let tInd = 0; tInd < new_window.tabs.length; tInd++) {
-						RefsTabs[NewTabs[tInd].id] = new_window.tabs[tInd].id;
-						NewTabs[tInd].id = new_window.tabs[tInd].id;
-					}
-					for (let tInd = 0; tInd < new_window.tabs.length; tInd++) {
-						if (RefsTabs[NewTabs[tInd].parent] != undefined) {
-							NewTabs[tInd].parent = RefsTabs[NewTabs[tInd].parent];
+						if (NewTabs[tInd]) {
+							RefsTabs[NewTabs[tInd].id] = new_window.tabs[tInd].id;
+							NewTabs[tInd].id = new_window.tabs[tInd].id;
 						}
 					}
-					let HaveResponse;
-					let GiveUp = 0;
-					var Append = setInterval(function() {
-						chrome.runtime.sendMessage({ command: "remote_update", groups: w.groups, folders: w.folders, tabs: NewTabs, windowId: new_window.id }, function(response) {
-							HaveResponse = response;
-						});
-						if (HaveResponse || GiveUp > 900) {
-							clearInterval(Append);
-						}
-						GiveUp++;
-					}, 2000);
-				});
-			} else { // window exists, lets add missing tabs
-				if (opt.debug) {
-					log("f: ImportMergeTabs, window exists");
-				}
-
-				let NewTabs = [];
-				(w.tabs).forEach(function(Tab) {
-					if (Tab.url != "") { // missing tab, lets make one
-						chrome.tabs.create({ url: Tab.url, windowId: w.id }, function(tab) {
-							Tab.id = tab.id;
-							RefsTabs[tab.id] = tab.id;
-							NewTabs.push(Tab);
-						});
-					} else {
-						NewTabs.push(Tab);
-					}
-				});
-				setTimeout(function() {
 					for (let tInd = 0; tInd < NewTabs.length; tInd++) {
 						if (RefsTabs[NewTabs[tInd].parent] != undefined) {
 							NewTabs[tInd].parent = RefsTabs[NewTabs[tInd].parent];
 						}
 					}
-				}, 4000);
-				setTimeout(function() {
-					if (w.id == CurrentWindowId) {
-						RearrangeTreeStructure(w.groups, w.folders, NewTabs);
-					} else {
-						let HaveResponse;
-						let GiveUp = 0;
-						var Append = setInterval(function() {
-							chrome.runtime.sendMessage({ command: "remote_update", groups: w.groups, folders: w.folders, tabs: NewTabs, windowId: w.id }, function(response) {
-								HaveResponse = response;
-							});
-							if (HaveResponse || GiveUp > 900) {
-								clearInterval(Append);
-							}
-							GiveUp++;
-						}, 2000);
+
+					for (let tInd = 0; tInd < new_window.tabs.length; tInd++) {
+						if (NewTabs[tInd].parent == "pin_list") {
+							chrome.tabs.update(new_window.tabs[tInd].id, { pinned: true });
+						}
+						chrome.runtime.sendMessage({command: "update_tab", tabId: new_window.tabs[tInd].id, tab: {index: NewTabs[tInd].index, expand: NewTabs[tInd].expand, parent: NewTabs[tInd].parent}});
 					}
-				}, 6000);
+					
+
+					let done = 3;
+					var Append = setInterval(function() {
+						chrome.runtime.sendMessage({command: "remote_update", groups: w.groups, folders: w.folders, tabs: NewTabs, windowId: w.id });
+						if (done < 0) { clearInterval(Append); }
+						done--;
+					}, 2000);
+				});
+			} else { // window exists, lets add missing tabs
+				let NewTabs = [];
+				let RefsTabs = {};
+
+				chrome.runtime.sendMessage({command: "get_folders", windowId: w.id}, function(f) {
+					chrome.runtime.sendMessage({command: "get_groups", windowId: w.id}, function(g) {
+						if (Object.keys(w.groups).length > 0) {
+							for (var group in w.groups) {
+								if (group != "" && group != "undefined" && w.groups[group] != undefined) {
+									g[w.groups[group].id] = Object.assign({}, w.groups[group]);
+								}
+							}
+						}
+						if (Object.keys(w.folders).length > 0) {
+							for (var folder in w.folders) {
+								if (folder != "" && folder != "undefined" && w.folders[folder] != undefined) {
+									w.folders[w.folders[folder].id] = Object.assign({}, w.folders[folder]);
+								}
+							}
+						}
+						
+						if (Object.keys(g).length > 0) {
+							for (var groupId in g) {
+								w.groups[groupId] = Object.assign({}, g[groupId]);
+							}
+						}
+						if (Object.keys(f).length > 0) {
+							for (var folderId in f) {
+								w.folders[folderId] = Object.assign({}, f[folderId]);
+							}
+						}
+
+						chrome.runtime.sendMessage({command: "save_groups", windowId: w.id, groups: g});
+						chrome.runtime.sendMessage({command: "save_folders", windowId: w.id, folders: f});
+						chrome.runtime.sendMessage({ command: "remote_update", groups: w.groups, folders: w.folders, tabs: [], windowId: w.id });
+
+						if (w.id == tt.CurrentWindowId) {
+							RcreateTreeStructure(w.groups, w.folders, []);
+						}
+
+						(w.tabs).forEach(function(Tab) {
+							if (Tab.url != "") { // missing tab, lets make one
+								chrome.tabs.create({ url: Tab.url, pinned: (Tab.parent == "pin_list" ? true : false), windowId: w.id }, function(tab) {
+									RefsTabs[Tab.id] = tab.id;
+									Tab.id = tab.id;
+									NewTabs.push(Tab);
+									chrome.runtime.sendMessage({command: "update_tab", tabId: tab.id, tab: {index: Tab.index, expand: Tab.expand, parent: Tab.parent}});
+								});
+							} else {
+								NewTabs.push(Tab);
+							}
+						});
+
+						setTimeout(function() {
+							ShowStatusBar({show: true, spinner: true, message: "Finding reference tabs..."});
+							for (let tInd = 0; tInd < NewTabs.length; tInd++) {
+								if (RefsTabs[NewTabs[tInd].parent] != undefined) {
+									NewTabs[tInd].parent = RefsTabs[NewTabs[tInd].parent];
+								}
+							}
+						}, 4000);
+						
+						setTimeout(function() {
+							for (let tInd = 0; tInd < NewTabs.length; tInd++) {
+								chrome.runtime.sendMessage({command: "update_tab", tabId: NewTabs[tInd].id, tab: {index: NewTabs[tInd].index, expand: NewTabs[tInd].expand, parent: NewTabs[tInd].parent}});
+							}
+							let done = 10;
+							var Append = setInterval(function() {
+								ShowStatusBar({show: true, spinner: true, message: "Finding other windows to add tabs..."});
+								
+								if (w.id == tt.CurrentWindowId) {
+									RcreateTreeStructure(w.groups, w.folders, NewTabs);
+								} else {
+									chrome.runtime.sendMessage({command: "remote_update", groups: w.groups, folders: w.folders, tabs: NewTabs, windowId: w.id });
+								}
+								if (done < 0) {
+									ShowStatusBar({show: true, spinner: false, message: "All done.", hideTimeout: 2000});
+									clearInterval(Append);
+								}
+								done--;
+							}, 500);
+						}, 6000);
+
+					});
+				});
+
 			}
 		});
 	});
@@ -488,13 +558,16 @@ function ImportMergeTabs(LoadedSession) {
 
 function StartAutoSaveSession() {
 	if (opt.autosave_interval > 0 && opt.autosave_max_to_keep > 0) {
-		AutoSaveSession = setInterval(function() {
+		tt.AutoSaveSession = setInterval(function() {
 			if (opt.debug) {
 				log("f: AutoSaveSession, loop time is: "+opt.autosave_interval);
 			}
 
 			let d = new Date();
-			ExportSession((d.toLocaleString().replace("/", ".").replace("/", ".").replace(":", "꞉").replace(":", "꞉")), false, false, true);
+			let newName = d.toLocaleString().replace("/", ".").replace("/", ".").replace(":", "꞉").replace(":", "꞉");
+			ExportSession(newName, false, false, true);
+			
+			ShowStatusBar({show: true, spinner: false, message: "Autosave: "+newName, hideTimeout: 1000});
 
 			if (document.getElementById("manager_window").style.top != "-500px") {
 				chrome.storage.local.get(null, function(storage) {

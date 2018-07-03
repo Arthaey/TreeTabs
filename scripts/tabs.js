@@ -11,10 +11,10 @@ async function UpdateData() {
 	}
 	
 	setInterval(function() {
-		if (schedule_update_data > 1) {
-			schedule_update_data = 1;
+		if (tt.schedule_update_data > 1) {
+			tt.schedule_update_data = 1;
 		}
-		if (schedule_update_data > 0) {
+		if (tt.schedule_update_data > 0) {
 			let PinInd = 0;
 			let pins_data = [];
 			document.querySelectorAll(".pin").forEach(function(pin){
@@ -27,83 +27,94 @@ async function UpdateData() {
 				tabs_data.push({id: tab.id, parent: tab.parentNode.parentNode.id, index: Array.from(tab.parentNode.children).indexOf(tab), expand: (tab.classList.contains("c") ? "c" : (tab.classList.contains("o") ? "o" : ""))});
 			});
 			chrome.runtime.sendMessage({command: "update_all_tabs", pins: pins_data, tabs: tabs_data});
-			schedule_update_data--;
-		}
-	}, 2000);
-}
-
-function RearrangeBrowserTabs() {
-	if (opt.debug) {
-		log("f: RearrangeBrowserTabs");
-	}
-	setInterval(function() {
-		if (schedule_rearrange_tabs > 0) {
-			schedule_rearrange_tabs--;
-			let tabIds = Array.prototype.map.call(document.querySelectorAll(".pin, .tab"), function(s){
-				return parseInt(s.id);
-			});
-			RearrangeBrowserTabsLoop(tabIds, tabIds.length-1);
+			tt.schedule_update_data--;
 		}
 	}, 1000);
 }
 
-async function RearrangeBrowserTabsLoop(tabIds, tabIndex) {
+async function RearrangeBrowserTabs() {
+	setInterval(function() {
+		if (tt.schedule_rearrange_tabs > 0) {
+			tt.schedule_rearrange_tabs--;
+			if (opt.debug) {
+				log("f: RearrangeBrowserTabs");
+			}
+			chrome.tabs.query({currentWindow: true}, function(tabs) {
+				let ttTabIds = Array.prototype.map.call(document.querySelectorAll(".pin, .tab"), function(s){
+					return parseInt(s.id);
+				});
+				let tabIds = Array.prototype.map.call(tabs, function(t){
+					return t.id;
+				});
+				RearrangeBrowserTabsLoop(ttTabIds, tabIds, ttTabIds.length-1);
+			});
+		}
+	}, 1000);
+}
+
+async function RearrangeBrowserTabsLoop(ttTabIds, tabIds, tabIndex) {
 	if (opt.debug) {
 		log("f: RearrangeBrowserTabsLoop");
 	}
-	if (tabIndex >= 0 && schedule_rearrange_tabs == 0){
-		chrome.tabs.get(tabIds[tabIndex], function(tab) {
-			if (tab && tabIndex != tab.index) {
-				chrome.tabs.move(tabIds[tabIndex], {index: tabIndex});
-			}
-			RearrangeBrowserTabsLoop( tabIds, (tabIndex-1) );
-		});
+	if (tabIndex >= 0 && tt.schedule_rearrange_tabs == 0){
+		if (ttTabIds[tabIndex] != tabIds[tabIndex]) {
+			chrome.tabs.move(ttTabIds[tabIndex], {index: tabIndex});
+		}
+		setTimeout(function() {
+			RearrangeBrowserTabsLoop(ttTabIds, tabIds, (tabIndex-1));
+		}, 0);
 	}
 }
 
-function RearrangeTreeTabs(tabs, bgtabs, first_loop) {
-	tabs.forEach(function(Tab) {
-		let t = document.getElementById(Tab.id);
-		if (bgtabs[Tab.id] && t != null && t.parentNode.childNodes[bgtabs[Tab.id].index]) {
-			let tInd = Array.from(t.parentNode.children).indexOf(t);
-			if (tInd > bgtabs[Tab.id].index) {
-				InsterBeforeNode(t, t.parentNode.childNodes[bgtabs[Tab.id].index]);
-			} else {
-				InsterAfterNode(t, t.parentNode.childNodes[bgtabs[Tab.id].index]);
+function RearrangeTreeTabs(bgtabs, show_finish_in_status) {
+	if (opt.debug) {
+		log("f: RearrangeTreeTabs");
+	}
+	ShowStatusBar({show: true, spinner: true, message: "Rearranging tabs and folders"});
+	document.querySelectorAll(".pin, .tab").forEach(function(tab){
+		if (bgtabs[tab.id]) {
+			let Sibling = tab.nextElementSibling;
+			while (Sibling) {
+				if (bgtabs[Sibling.id]) {
+					if (bgtabs[tab.id].index > bgtabs[Sibling.id].index   ) {
+						InsterAfterNode(tab, Sibling);
+					}
+				}
+				Sibling = Sibling.nextElementSibling ? Sibling.nextElementSibling : false;
 			}
-			let newtInd = Array.from(t.parentNode.children).indexOf(t);
-			if (bgtabs[Tab.id] && newtInd != bgtabs[Tab.id].index && first_loop) {
-				RearrangeTreeTabs(tabs, bgtabs, false);
-			}
+		}
+		if (show_finish_in_status){
+			ShowStatusBar({show: true, spinner: false, message: "Rearranging: done.", hideTimeout: 1000});
 		}
 	});
 }
 
-function AppendTab(tab, ParentId, InsertBeforeId, InsertAfterId, Append, Index, SetEvents, AdditionalClass, SkipSetActive, Scroll, addCounter) {
-	if (document.getElementById(tab.id) != null) {
-		GetFaviconAndTitle(tab.id, addCounter);
+function AppendTab(p) { // tab: chrome tab object, ParentId: int or string, InsertBeforeId: int or string, InsertAfterId: int or string, Append: bool, SkipSetEvents: bool, AdditionalClass: string, SkipSetActive: bool, Scroll: bool, addCounter: bool, SkipMediaIcon: bool
+	if (document.getElementById(p.tab.id) != null) {
+		GetFaviconAndTitle(p.tab.id, p.addCounter);
 		return;
 	}	
-	var ClassList = tab.pinned ? "pin" : "tab";
-	if (tab.discarded) {
+	let ClassList = p.tab.pinned ? "pin" : "tab";
+	if (p.tab.discarded) {
 		ClassList = ClassList + " discarded";
 	}
-	if (AdditionalClass != false) {
-		ClassList = ClassList +" "+ AdditionalClass;
+	if (p.AdditionalClass) {
+		ClassList = ClassList +" "+ p.AdditionalClass;
 	}
-	var tb = document.createElement("div"); tb.className =  ClassList; tb.id = tab.id; // TAB
-	var th = document.createElement("div"); th.className = (opt.always_show_close && !opt.never_show_close) ? "tab_header close_show" : "tab_header"; th.id = "tab_header"+tab.id; if (SetEvents) {th.draggable = true;} tb.appendChild(th); // HEADER
-	var ex = document.createElement("div"); ex.className = "expand"; ex.id = "exp"+tab.id; th.appendChild(ex); // EXPAND ARROW
-	var tt = document.createElement("div"); tt.className = "tab_title"; tt.id = "tab_title"+tab.id; th.appendChild(tt); // TITLE
+	let tb = document.createElement("div"); tb.className =  ClassList; tb.id = p.tab.id; // TAB
+	let tbh = document.createElement("div"); tbh.className = (opt.always_show_close && !opt.never_show_close) ? "tab_header close_show" : "tab_header"; tbh.id = "tab_header"+p.tab.id; if (!p.SkipSetEvents) {tbh.draggable = true;} tb.appendChild(tbh); // HEADER
+	let tbe = document.createElement("div"); tbe.className = "expand"; tbe.id = "exp"+p.tab.id; tbh.appendChild(tbe); // EXPAND ARROW
+	let tbt = document.createElement("div"); tbt.className = "tab_title"; tbt.id = "tab_title"+p.tab.id; tbh.appendChild(tbt); // TITLE
+	let cl = undefined;
 	if (!opt.never_show_close) {
-		var cl = document.createElement("div"); cl.className = "close"; cl.id = "close"+tab.id; th.appendChild(cl); // CLOSE BUTTON
-		var ci = document.createElement("div"); ci.className = "close_img"; ci.id = "close_img"+tab.id; cl.appendChild(ci);
+		cl = document.createElement("div"); cl.className = "close"; cl.id = "close"+p.tab.id; tbh.appendChild(cl); // CLOSE BUTTON
+		let ci = document.createElement("div"); ci.className = "close_img"; ci.id = "close_img"+p.tab.id; cl.appendChild(ci);
 	}
-	var mi = document.createElement("div"); mi.className = "tab_mediaicon"; mi.id = "tab_mediaicon"+tab.id; th.appendChild(mi);
-	var ct = document.createElement("div"); ct.className = "children_tabs"; ct.id = "ct"+tab.id; tb.appendChild(ct);
-	var di = document.createElement("div"); di.className = "drag_indicator"; di.id = "di"+tab.id; tb.appendChild(di); // DROP TARGET INDICATOR
+	let mi = document.createElement("div"); mi.className = "tab_mediaicon"; mi.id = "tab_mediaicon"+p.tab.id; tbh.appendChild(mi);
+	let ct = document.createElement("div"); ct.className = "children_tabs"; ct.id = "ct"+p.tab.id; tb.appendChild(ct);
+	let di = document.createElement("div"); di.className = "drag_indicator"; di.id = "di"+p.tab.id; tb.appendChild(di); // DROP TARGET INDICATOR
 	
-	if (SetEvents) {
+	if (!p.SkipSetEvents) {
 		ct.onclick = function(event) {
 			if (event.target == this && event.which == 1) {
 				DeselectFolders();
@@ -126,7 +137,7 @@ function AppendTab(tab, ParentId, InsertBeforeId, InsertAfterId, Append, Index, 
 				ActionClickGroup(this.parentNode, opt.dbclick_group);
 			}
 		}
-		ex.onmousedown = function(event) {
+		tbe.onmousedown = function(event) {
 			if (document.getElementById("main_menu").style.top != "-1000px") {
 				HideMenus();
 			}
@@ -134,14 +145,14 @@ function AppendTab(tab, ParentId, InsertBeforeId, InsertAfterId, Append, Index, 
 				EventExpandBox(this.parentNode.parentNode);
 			}
 		}
-		ex.onmouseenter = function(event) {
+		tbe.onmouseenter = function(event) {
 			this.classList.add("hover");
 		}
-		ex.onmouseleave = function(event) {
+		tbe.onmouseleave = function(event) {
 			this.classList.remove("hover");
 		}
 		
-		if (!opt.never_show_close) {
+		if (!opt.never_show_close && cl) {
 			cl.onmousedown = function(event) {
 				event.stopImmediatePropagation();
 				if (event.which != 3) {
@@ -156,7 +167,7 @@ function AppendTab(tab, ParentId, InsertBeforeId, InsertAfterId, Append, Index, 
 			}
 		}
 
-		th.onclick = function(event) {
+		tbh.onclick = function(event) {
 			event.stopImmediatePropagation();
 			if (document.getElementById("main_menu").style.top != "-1000px") {
 				HideMenus();
@@ -167,16 +178,16 @@ function AppendTab(tab, ParentId, InsertBeforeId, InsertAfterId, Append, Index, 
 				}
 			}
 		}
-		th.ondblclick = function(event) {
+		tbh.ondblclick = function(event) {
 			if (event.target.classList && event.target.classList.contains("tab_header")) {
 				ActionClickTab(this.parentNode, opt.dbclick_tab);
 			}
 		}
 		
-		th.onmousedown = function(event) {
+		tbh.onmousedown = function(event) {
 			if (browserId == "V") {
 				chrome.windows.getCurrent({populate: false}, function(window) {
-					if (CurrentWindowId != window.id) {
+					if (tt.CurrentWindowId != window.id && window.focused) {
 						location.reload();
 					}
 				});
@@ -194,13 +205,13 @@ function AppendTab(tab, ParentId, InsertBeforeId, InsertAfterId, Append, Index, 
 			}
 		}
 
-		th.onmouseover = function(event) {
+		tbh.onmouseover = function(event) {
 			this.classList.add("tab_header_hover");
 			if (opt.never_show_close == false && opt.always_show_close == false) {
 				this.classList.add("close_show");
 			}
 		}
-		th.onmouseleave = function(event) {
+		tbh.onmouseleave = function(event) {
 			this.classList.remove("tab_header_hover");
 			if (opt.never_show_close == false && opt.always_show_close == false) {
 				this.classList.remove("close_show");
@@ -209,26 +220,33 @@ function AppendTab(tab, ParentId, InsertBeforeId, InsertAfterId, Append, Index, 
 
 
 		
-		th.ondragstart = function(event) { // DRAG START
+		tbh.ondragstart = function(event) { // DRAG START
 			TabStartDrag(this.parentNode, event);
 		}
 
-		
-		
-		th.ondragenter = function(event) {
+		tbh.ondragenter = function(event) {
 			this.classList.remove("tab_header_hover");
-			DragOverTimer = false;
-			setTimeout(function() {
-				DragOverTimer = true;
-			}, 1000);
 		}
 
-		th.ondragleave = function(event) {
+		tbh.ondragleave = function(event) {
 			RemoveHighlight();
 		}
 
-		th.ondragover = function(event) {
+		tbh.ondragover = function(event) {
 			TabDragOver(this, event);
+			if (opt.open_tree_on_hover && tt.DragOverId != this.id) {
+				if (this.parentNode.classList.contains("c") && this.parentNode.classList.contains("dragged_tree") == false) {
+					clearTimeout(tt.DragOverTimer);
+					tt.DragOverId = this.id;
+					let This = this;
+					tt.DragOverTimer = setTimeout(function() {
+						if (tt.DragOverId == This.id) {
+							This.parentNode.classList.add("o");
+							This.parentNode.classList.remove("c");
+						}
+					}, 1500);	
+				}
+			}
 		}
 
 		mi.onmousedown = function(event) {
@@ -244,58 +262,56 @@ function AppendTab(tab, ParentId, InsertBeforeId, InsertAfterId, Append, Index, 
 	}	
 
 	let parent;
-	if (tab.pinned) {
+	if (p.tab.pinned) {
 		parent = document.getElementById("pin_list");
 	} else {
-		if (ParentId == false || ParentId == undefined || document.getElementById(ParentId) == null || document.querySelector(".pin[id='"+ParentId+"']") != null || ParentId == "pin_list") {
-			parent = document.getElementById("ct"+active_group);
+		if (p.ParentId == false || p.ParentId == undefined || document.getElementById(p.ParentId) == null || document.querySelector(".pin[id='"+p.ParentId+"']") != null || p.ParentId == "pin_list") {
+			parent = document.getElementById("ct"+tt.active_group);
 		} else {
-			parent = document.getElementById("ct"+ParentId);
+			parent = document.getElementById("ct"+p.ParentId);
 			if (parent.children.length == 0) {
 				parent.parentNode.classList.add("o");
 				parent.parentNode.classList.remove("c");
 			}
 		}
 	}	
-	if (Append && parent) {
+	if (p.Append && parent) {
 		parent.appendChild(tb);
 	}
-	if (!Append && parent) {
+	if (!p.Append && parent) {
 		parent.prepend(tb);
 	}
 	
-	if (InsertBeforeId) {
-		let Before = document.getElementById(InsertBeforeId);
+	if (p.InsertBeforeId) {
+		let Before = document.getElementById(p.InsertBeforeId);
 		if (Before != null) {
-			if ((tab.pinned && Before.classList.contains("pin")) || (tab.pinned == false && Before.classList.contains("tab"))) {
+			if ((p.tab.pinned && Before.classList.contains("pin")) || (p.tab.pinned == false && Before.classList.contains("tab"))) {
 				Before.parentNode.insertBefore(tb, Before);
 			}
 		}
 	}
-	if (InsertAfterId) {
-		let After = document.getElementById(InsertAfterId);
+	if (p.InsertAfterId) {
+		let After = document.getElementById(p.InsertAfterId);
 		if (After != null) {
-			if ((tab.pinned && After.classList.contains("pin")) || (tab.pinned == false && After.classList.contains("tab"))) {
+			if ((p.tab.pinned && After.classList.contains("pin")) || (p.tab.pinned == false && After.classList.contains("tab"))) {
 				InsterAfterNode(tb, After);
 			}
 		}
 	}
-	if (Index) {
-		if (tb.parentNode.childNodes.length >= Index) {
-			tb.parentNode.insertBefore(tb, tb.parentNode.childNodes[Index]);
-		} else {
-			tb.parentNode.appendChild(tb);
-		}
+	GetFaviconAndTitle(p.tab.id, p.addCounter);
+	if (!p.SkipMediaIcon) {
+		RefreshMediaIcon(p.tab.id);
 	}
-	GetFaviconAndTitle(tab.id, addCounter);
-	RefreshMediaIcon(tab.id);
-	if (tab.active && SkipSetActive == false) {
-		SetActiveTab(tab.id);
+	if (p.tab.active && !p.SkipSetActive) {
+		SetActiveTab(p.tab.id);
 	}
-	if (Scroll) {
-		ScrollToTab(tab.id);
+	if (p.Scroll) {
+		ScrollToTab(p.tab.id);
 	}
+	
+	return tb;
 }
+
 
 function RemoveTabFromList(tabId) {
 	if (opt.debug) {
@@ -309,7 +325,7 @@ function RemoveTabFromList(tabId) {
 
 function SetTabClass(tabId, pin) {
 	let PinList = document.getElementById("pin_list");
-	let GroupList = document.getElementById("ct"+active_group);
+	let GroupList = document.getElementById("ct"+tt.active_group);
 	let Tab = document.getElementById(tabId);
 	if (Tab != null) {
 		if (pin) {
@@ -323,9 +339,9 @@ function SetTabClass(tabId, pin) {
 			if (document.getElementById("ct"+tabId).childNodes.length > 0) { // flatten out children
 				let tabs = document.querySelectorAll("#ct"+tabId+" .pin, #ct"+tabId+" .tab");
 				for (let i = tabs.length-1; i >= 0; i--) {
-					tabs[i].remove("tab");
-					tabs[i].remove("o");
-					tabs[i].remove("c");
+					tabs[i].classList.remove("tab");
+					tabs[i].classList.remove("o");
+					tabs[i].classList.remove("c");
 					tabs[i].classList.add("pin");
 					InsterAfterNode(tabs[i], Tab);
 					chrome.tabs.update(parseInt(tabs[i].id), {pinned: true});
@@ -352,6 +368,7 @@ function SetTabClass(tabId, pin) {
 function SetMultiTabsClass(TabsIds, pin) {
 	TabsIds.forEach(function(tabId){
 		SetTabClass(tabId, pin);
+		chrome.tabs.update(parseInt(tabId), {pinned: pin});
 	});
 }
 
@@ -373,8 +390,8 @@ function SetActiveTab(tabId, switchToGroup) {
 		document.querySelectorAll(".selected_folder").forEach(function(s){
 			s.classList.remove("selected_folder");
 		});
-		// document.querySelectorAll(".pin, #"+active_group+" .tab"+(TabGroup.length ? ", #"+TabGroup[0].id+" .tab" : "")).forEach(function(s){
-		document.querySelectorAll(".pin, #"+active_group+" .tab").forEach(function(s){
+		// document.querySelectorAll(".pin, #"+tt.active_group+" .tab"+(TabGroup.length ? ", #"+TabGroup[0].id+" .tab" : "")).forEach(function(s){
+		document.querySelectorAll(".pin, #"+tt.active_group+" .tab").forEach(function(s){
 			s.classList.remove("active_tab");
 			s.classList.remove("selected_tab");
 			s.classList.remove("selected_last");
@@ -396,12 +413,12 @@ function ScrollToTab(tabId) {
 			if (Tab.getBoundingClientRect().left - document.getElementById("pin_list").getBoundingClientRect().left < 0) {
 				document.getElementById("pin_list").scrollLeft = document.getElementById("pin_list").scrollLeft + Tab.getBoundingClientRect().left - document.getElementById("pin_list").getBoundingClientRect().left - 2;
 			} else {
-				if (Tab.getBoundingClientRect().left - document.getElementById("pin_list").getBoundingClientRect().left > document.getElementById(active_group).getBoundingClientRect().width - document.querySelector(".tab_header").getBoundingClientRect().width) {
+				if (Tab.getBoundingClientRect().left - document.getElementById("pin_list").getBoundingClientRect().left > document.getElementById(tt.active_group).getBoundingClientRect().width - document.querySelector(".tab_header").getBoundingClientRect().width) {
 					document.getElementById("pin_list").scrollLeft = document.getElementById("pin_list").scrollLeft + Tab.getBoundingClientRect().left - document.getElementById("pin_list").getBoundingClientRect().left - document.getElementById("pin_list").getBoundingClientRect().width + document.querySelector(".tab_header").getBoundingClientRect().width + 2;
 				}
 			}
 		}
-		if (Tab.classList.contains("tab") && document.querySelector("#"+active_group+" [id='"+tabId+"']") != null) {
+		if (Tab.classList.contains("tab") && document.querySelector("#"+tt.active_group+" [id='"+tabId+"']") != null) {
 			let Parents = GetParentsByClass(Tab, "c");
 			if (Parents.length > 0) {
 				Parents.forEach(function(s){
@@ -409,11 +426,11 @@ function ScrollToTab(tabId) {
 					s.classList.add("o");
 				});
 			}
-			if (Tab.getBoundingClientRect().top - document.getElementById(active_group).getBoundingClientRect().top < 0) {
-				document.getElementById(active_group).scrollTop = document.getElementById(active_group).scrollTop + Tab.getBoundingClientRect().top - document.getElementById(active_group).getBoundingClientRect().top - 2;
+			if (Tab.getBoundingClientRect().top - document.getElementById(tt.active_group).getBoundingClientRect().top < 0) {
+				document.getElementById(tt.active_group).scrollTop = document.getElementById(tt.active_group).scrollTop + Tab.getBoundingClientRect().top - document.getElementById(tt.active_group).getBoundingClientRect().top - 2;
 			} else {
-				if (Tab.getBoundingClientRect().top - document.getElementById(active_group).getBoundingClientRect().top > document.getElementById(active_group).getBoundingClientRect().height - document.querySelector(".tab_header").getBoundingClientRect().height) {
-					document.getElementById(active_group).scrollTop = document.getElementById(active_group).scrollTop + Tab.getBoundingClientRect().top - document.getElementById(active_group).getBoundingClientRect().top - document.getElementById(active_group).getBoundingClientRect().height + document.querySelector(".tab_header").getBoundingClientRect().height + 10;
+				if (Tab.getBoundingClientRect().top - document.getElementById(tt.active_group).getBoundingClientRect().top > document.getElementById(tt.active_group).getBoundingClientRect().height - document.querySelector(".tab_header").getBoundingClientRect().height) {
+					document.getElementById(tt.active_group).scrollTop = document.getElementById(tt.active_group).scrollTop + Tab.getBoundingClientRect().top - document.getElementById(tt.active_group).getBoundingClientRect().top - document.getElementById(tt.active_group).getBoundingClientRect().height + document.querySelector(".tab_header").getBoundingClientRect().height + 10;
 				}
 			}
 		}
@@ -424,7 +441,7 @@ function Detach(tabsIds, Folders) {
 	if (opt.debug) {
 		log("f: Detach");
 	}
-	chrome.windows.get(CurrentWindowId, {populate : true}, function(window) {
+	chrome.windows.get(tt.CurrentWindowId, {populate : true}, function(window) {
 		if (window.tabs.length == 1 || tabsIds.length == 0) {
 			return;
 		}
@@ -438,62 +455,27 @@ function Detach(tabsIds, Folders) {
 		let Indexes = [];
 		let Parents = [];
 		let Expands = [];
-		let NewIds = [];																	// MOZILLA BUG 1398272
 		let NewTabs = [];
 		let Ind = 0;
 
 		tabsIds.forEach(function(tabId) {
 			let tab = document.getElementById(tabId);
-			NewIds.push(tabId);															// MOZILLA BUG 1398272
 			Indexes.push(Array.from(tab.parentNode.children).indexOf(tab));
 			Parents.push(tab.parentNode.parentNode.id);
 			Expands.push( (tab.classList.contains("c") ? "c" : (tab.classList.contains("o") ? "o" : ""))  );
 		});
 
 		chrome.windows.create({tabId: tabsIds[0], state:window.state}, function(new_window) {
-			tabsIds.forEach(function(tabId) {
-				chrome.tabs.move(tabId, {windowId: new_window.id, index:-1}, function(MovedTab) {
-					if (browserId == "F") {													// MOZILLA BUG 1398272
-						if (Ind == 0) {														// MOZILLA BUG 1398272
-							NewIds[Ind] = new_window.tabs[0].id;						// MOZILLA BUG 1398272
-						} else {																	// MOZILLA BUG 1398272
-							NewIds[Ind] = MovedTab[0].id;									// MOZILLA BUG 1398272
-						}																			// MOZILLA BUG 1398272
-						NewTabs.push({id: NewIds[Ind], index: Indexes[Ind], parent: ((tabsIds.indexOf(parseInt(Parents[Ind])) != -1) ? NewIds[tabsIds.indexOf(parseInt(Parents[Ind]))] : Parents[Ind]), expand: Expands[Ind]});	// MOZILLA BUG 1398272
-					} else {																		// MOZILLA BUG 1398272
-						NewTabs.push({id: tabsIds[Ind], index: Indexes[Ind], parent: Parents[Ind], expand: Expands[Ind]}); // PUSH TAB FROM INDEX
-					}																				// MOZILLA BUG 1398272
-					Ind++;
-					if (Ind >= Parents.length-1) {
-						// chrome.tabs.remove(new_window.tabs[0].id, null);
-						let Confirmations = 0;
-						let GiveUpLimit = 600;
-						if (opt.debug) {
-							log("Detach - Remote Append and Update Loop, waiting for confirmations after attach tabs");
-						}
-						var Append = setInterval(function() {
-							chrome.windows.get(new_window.id, function(confirm_new_window) {
-								chrome.runtime.sendMessage({command: "remote_update", groups: {}, folders: Folders, tabs: NewTabs, windowId: new_window.id}, function(response) {
-									if (response) {
-										Confirmations++;
-									}
-								});
-								GiveUpLimit--;
-								if (opt.debug) {
-									log("Detach -> Attach in new window confirmed: "+Confirmations+" times. If sidebar is not open in new window this loop will give up in: "+GiveUpLimit+" seconds");
-								}
-								if (Confirmations > 2 || GiveUpLimit < 0 || confirm_new_window == undefined) {
-									clearInterval(Append);
-								}
-							});
-						}, 1000);
-						if (Folders && Object.keys(Folders).length > 0) {
-							for (var folder in Folders) {
-								RemoveFolder(Folders[folder].id);
-							}
-						}
+
+			tabsIds.splice(0, 1);
+			chrome.tabs.move(tabsIds, {windowId: new_window.id, index:-1}, function(MovedTabs) {
+						
+				if (Folders && Object.keys(Folders).length > 0) {
+					for (let folder in Folders) {
+						RemoveFolder(Folders[folder].id);
 					}
-				});
+				}
+						
 			});
 		});
 	});
@@ -509,9 +491,9 @@ function CloseTabs(tabsIds) {
 			Tab.classList.add("will_be_closed");
 		}
 	});
-	let activeTab = document.querySelector(".pin.active_tab, #"+active_group+" .tab.active_tab");
+	let activeTab = document.querySelector(".pin.active_tab, #"+tt.active_group+" .tab.active_tab");
 	if (activeTab != null && tabsIds.indexOf(parseInt(activeTab.id)) != -1) {
-		SwitchActiveTabBeforeClose(active_group);
+		SwitchActiveTabBeforeClose(tt.active_group);
 	}
 	tabsIds.forEach(function(tabId) {
 		let tab = document.getElementById(tabId);
@@ -529,7 +511,7 @@ function CloseTabs(tabsIds) {
 }
 
 function DiscardTabs(tabsIds) {
-	var delay = 100;
+	let delay = 100;
 	let tabNode = document.getElementById(tabsIds[0]);
 	if (tabNode == null || tabNode.classList.contains("discarded") || tabNode.classList.contains("active_tab")) {
 		delay = 5;
@@ -619,10 +601,10 @@ function ActivateNextTabBeforeClose() {
 		}
 	}
 	
-	let will_be_closed = document.querySelectorAll("#"+active_group+" .will_be_closed");
-	let activeTab = will_be_closed.length > 0 ? will_be_closed[will_be_closed.length-1] : document.querySelector("#"+active_group+" .tab.active_tab");
+	let will_be_closed = document.querySelectorAll("#"+tt.active_group+" .will_be_closed");
+	let activeTab = will_be_closed.length > 0 ? will_be_closed[will_be_closed.length-1] : document.querySelector("#"+tt.active_group+" .tab.active_tab");
 	
-	if (activeTab != null && document.querySelectorAll("#"+active_group+" .tab:not(.will_be_closed)").length > 1) {
+	if (activeTab != null && document.querySelectorAll("#"+tt.active_group+" .tab:not(.will_be_closed)").length > 1) {
 		if (opt.promote_children && activeTab.childNodes[1].firstChild != null) {
 			chrome.tabs.update(parseInt(activeTab.childNodes[1].firstChild.id), { active: true });
 		} else {
@@ -655,10 +637,10 @@ function ActivatePrevTabBeforeClose() {
 		}
 	}
 
-	let will_be_closed = document.querySelectorAll("#"+active_group+" .will_be_closed");
-	let activeTab = will_be_closed.length > 0 ? will_be_closed[0] : document.querySelector("#"+active_group+" .tab.active_tab");
+	let will_be_closed = document.querySelectorAll("#"+tt.active_group+" .will_be_closed");
+	let activeTab = will_be_closed.length > 0 ? will_be_closed[0] : document.querySelector("#"+tt.active_group+" .tab.active_tab");
 
-	if (activeTab != null && document.querySelectorAll("#"+active_group+" .tab:not(.will_be_closed)").length > 1) {
+	if (activeTab != null && document.querySelectorAll("#"+tt.active_group+" .tab:not(.will_be_closed)").length > 1) {
 		if (opt.promote_children && activeTab.childNodes[1].firstChild != null) {
 			chrome.tabs.update(parseInt(activeTab.childNodes[1].firstChild.id), { active: true });
 		} else {
@@ -691,10 +673,10 @@ function ActivateNextTab(allow_reverse) {
 		}
 	}
 
-	let will_be_closed = document.querySelectorAll("#"+active_group+" .will_be_closed");
-	let activeTab = will_be_closed.length > 0 ? will_be_closed[will_be_closed.length-1] : document.querySelector("#"+active_group+" .tab.active_tab");
+	let will_be_closed = document.querySelectorAll("#"+tt.active_group+" .will_be_closed");
+	let activeTab = will_be_closed.length > 0 ? will_be_closed[will_be_closed.length-1] : document.querySelector("#"+tt.active_group+" .tab.active_tab");
 
-	if (activeTab != null && document.querySelectorAll("#"+active_group+" .tab").length > 1) {
+	if (activeTab != null && document.querySelectorAll("#"+tt.active_group+" .tab").length > 1) {
 		let FirstChild = activeTab.childNodes[1].firstChild;
 		if (FirstChild != null) {
 			chrome.tabs.update(parseInt(FirstChild.id), { active: true });
@@ -733,10 +715,10 @@ function ActivatePrevTab(allow_reverse) {
 		}
 	}
 
-	let will_be_closed = document.querySelectorAll("#"+active_group+" .will_be_closed");
-	let activeTab = will_be_closed.length > 0 ? will_be_closed[0] : document.querySelector("#"+active_group+" .tab.active_tab");
+	let will_be_closed = document.querySelectorAll("#"+tt.active_group+" .will_be_closed");
+	let activeTab = will_be_closed.length > 0 ? will_be_closed[0] : document.querySelector("#"+tt.active_group+" .tab.active_tab");
 
-	if (activeTab != null && document.querySelectorAll("#"+active_group+" .tab").length > 1) {
+	if (activeTab != null && document.querySelectorAll("#"+tt.active_group+" .tab").length > 1) {
 		let pSchildren = activeTab.previousSibling != null ? document.querySelectorAll("#ct"+activeTab.previousSibling.id+" .tab") : null;
 		if (activeTab.previousSibling != null && pSchildren.length > 0) {
 			chrome.tabs.update(parseInt(pSchildren[pSchildren.length-1].id), { active: true });
@@ -761,18 +743,19 @@ function OpenNewTab(pin, parentId) {
 	if (pin) {
 		chrome.tabs.create({pinned: true}, function(tab) {
 			if (parentId) {
-				AppendTab(tab, "pin_list", false, parentId, true, false, true, false, false, true, false);
-				schedule_update_data++;
+				AppendTab({tab: tab, ParentId: "pin_list", InsertAfterId: parentId, Append: true, Scroll: true});
+				tt.schedule_update_data++;
 			}
-			newTabUrl = tab.url;
 		});
 	} else {
 		chrome.tabs.create({}, function(tab) {
 			if (parentId) {
-				AppendTab(tab, parentId, false, false, (opt.append_orphan_tab == "top" ? false : true), false, true, false, false, true, false);
-				schedule_update_data++;
+				AppendTab({tab: tab, ParentId: parentId, Append: (opt.append_orphan_tab == "top" ? false : true), Scroll: true});
+				tt.schedule_update_data++;
 			}
-			newTabUrl = tab.url;
+			if (opt.move_tabs_on_url_change == "from_empty") {
+				chrome.runtime.sendMessage({command: "remove_tab_from_empty_tabs", tabId: tab.id});
+			}
 		});
 	}
 }
@@ -788,7 +771,7 @@ function DuplicateTab(SourceTabNode) {
 				}
 				InsterAfterNode(DupTab, SourceTabNode);
 				RefreshExpandStates();
-				schedule_update_data++;
+				tt.schedule_update_data++;
 				RefreshCounters();
 				clearInterval(DupRetry);
 			}
@@ -803,7 +786,7 @@ function DuplicateTab(SourceTabNode) {
 }
 
 function DeselectTabs() {
-	document.querySelectorAll(".pin.selected_tab, #"+active_group+" .selected_tab").forEach(function(s){
+	document.querySelectorAll(".pin.selected_tab, #"+tt.active_group+" .selected_tab").forEach(function(s){
 		s.classList.remove("selected_tab");
 		s.classList.remove("selected_last");
 	});
@@ -830,13 +813,13 @@ function EventExpandBox(Node) {
 			if (opt.collapse_other_trees) {
 				let thisTreeTabs = GetParentsByClass(Node.childNodes[0], "tab"); // start from tab's first child, instead of tab, important to include clicked tab as well
 				let thisTreeFolders = GetParentsByClass(Node.childNodes[0], "folder"); 
-				document.querySelectorAll("#"+active_group+" .o.tab").forEach(function(s){
+				document.querySelectorAll("#"+tt.active_group+" .o.tab").forEach(function(s){
 					s.classList.remove("o");
 					s.classList.add("c");
 					chrome.runtime.sendMessage({ command: "update_tab", tabId: parseInt(s.id), tab: { expand: "c" } });
 				});
 				
-				document.querySelectorAll("#"+active_group+" .o.folder").forEach(function(s){
+				document.querySelectorAll("#"+tt.active_group+" .o.folder").forEach(function(s){
 					s.classList.remove("o");
 					s.classList.add("c");
 				});
@@ -873,14 +856,14 @@ function EventExpandBox(Node) {
 function EventSelectTab(event, TabNode) {
 	DeselectFolders();
 	if (event.shiftKey) { // SET SELECTION WITH SHIFT
-		let activeTab = document.querySelector("#"+active_group+" .selected_tab.selected_last");
+		let activeTab = document.querySelector("#"+tt.active_group+" .selected_tab.selected_last");
 		if (activeTab == null) {
-			activeTab = document.querySelector(".pin.active_tab, #"+active_group+" .tab.active_tab");
+			activeTab = document.querySelector(".pin.active_tab, #"+tt.active_group+" .tab.active_tab");
 		}
 		if (activeTab != null && TabNode.parentNode.id == activeTab.parentNode.id) {
 
 			if (!event.ctrlKey) {
-				document.querySelectorAll(".pin.selected_tab, #"+active_group+" .selected_tab").forEach(function(s){
+				document.querySelectorAll(".pin.selected_tab, #"+tt.active_group+" .selected_tab").forEach(function(s){
 					s.classList.remove("selected_frozen");
 					s.classList.remove("selected_temporarly");
 					s.classList.remove("selected_tab");
@@ -936,11 +919,17 @@ function ActionClickTab(TabNode, bgOption) {
 		chrome.tabs.reload(parseInt(TabNode.id));
 	}
 	if (bgOption == "unload_tab") {
-		SwitchActiveTabBeforeClose(active_group);
-		DiscardTabs([parseInt(TabNode.id)]);
+		if (TabNode.classList.contains("active_tab")) {
+			SwitchActiveTabBeforeClose(tt.active_group);
+			setTimeout(function() {
+				DiscardTabs([parseInt(TabNode.id)]);
+			}, 500);
+		} else {
+			DiscardTabs([parseInt(TabNode.id)]);
+		}
 	}
 	if (bgOption == "activate_previous_active" && TabNode.classList.contains("active_tab")) {
-		chrome.tabs.update(parseInt(bggroups[active_group].prev_active_tab), {active: true});
+		chrome.tabs.update(parseInt(tt.groups[tt.active_group].prev_active_tab), {active: true});
 	}
 }
 
@@ -952,24 +941,24 @@ function TabStartDrag(Node, event) {
 	event.stopPropagation();
 	event.dataTransfer.setDragImage(document.getElementById("DragImage"), 0, 0);
 	event.dataTransfer.setData("text", "");
-	event.dataTransfer.setData("SourceWindowId", CurrentWindowId);
+	event.dataTransfer.setData("SourceWindowId", tt.CurrentWindowId);
 
 	CleanUpDragClasses();
 	EmptyDragAndDrop();
 
-	DragNodeClass = "tab";
+	tt.DragNodeClass = "tab";
 	
 	let TabsIds = [];
 	let TabsIdsParents = [];
 	let TabsIdsSelected = [];
 	
 	if (Node.classList.contains("selected_tab")) {
-		document.querySelectorAll(".group:not(#"+active_group+") .selected_tab").forEach(function(s){
+		document.querySelectorAll(".group:not(#"+tt.active_group+") .selected_tab").forEach(function(s){
 			s.classList.add("selected_frozen");
 			s.classList.remove("selected_tab");
 			s.classList.remove("selected_last");
 		});
-		document.querySelectorAll("#pin_list .selected_tab, .group#"+active_group+" .selected_tab").forEach(function(s){
+		document.querySelectorAll("#pin_list .selected_tab, .group#"+tt.active_group+" .selected_tab").forEach(function(s){
 			TabsIdsSelected.push(parseInt(s.id));
 		});
 	} else {
@@ -977,21 +966,23 @@ function TabStartDrag(Node, event) {
 		Node.classList.add("selected_temporarly");
 		Node.classList.add("selected_tab");
 		TabsIdsSelected.push(parseInt(Node.id));
+		event.dataTransfer.setData("DraggedTabNode", Node.id);
 	}
 	
 	document.querySelectorAll("[id='"+Node.id+"'], [id='"+Node.id+"'] .tab").forEach(function(s){
 		s.classList.add("dragged_tree");
 	});
 
-	if (opt.max_tree_drag_drop) {
+	
+	if (opt.max_tree_drag_drop || opt.max_tree_depth >= 0) {
 		document.querySelectorAll(".dragged_tree .tab").forEach(function(s){
 			let parents = GetParentsByClass(s.parentNode, "dragged_tree");
-			if (parents.length > DragTreeDepth) {
-				DragTreeDepth = parents.length;
+			if (parents.length > tt.DragTreeDepth) {
+				tt.DragTreeDepth = parents.length;
 			}
 		});
 	} else {
-		DragTreeDepth = -1;
+		tt.DragTreeDepth = -1;
 	}
 	
 	// REST OF SELECTED TABS THAT WILL BE DRAGGED
@@ -1000,9 +991,21 @@ function TabStartDrag(Node, event) {
 		TabsIds.push(parseInt(s.id));
 		TabsIdsParents.push(s.parentNode.id);
 	});
+	
+	let DraggedFolderParents = GetParentsByClass(Node, "folder");
+	DraggedFolderParents.forEach(function(s){
+		s.classList.add("dragged_parents");
+	});
+	let DraggedParents = GetParentsByClass(Node, "tab");
+	DraggedParents.forEach(function(s){
+		s.classList.add("dragged_parents");
+	});
+	
 
 	DragAndDropData = {TabsIds: TabsIds, TabsIdsParents: TabsIdsParents, TabsIdsSelected: TabsIdsSelected};
 	
+	event.dataTransfer.setData("Class", "tab");
+
 	event.dataTransfer.setData("TabsIds", JSON.stringify(TabsIds));
 	event.dataTransfer.setData("TabsIdsParents", JSON.stringify(TabsIdsParents));
 	event.dataTransfer.setData("TabsIdsSelected", JSON.stringify(TabsIdsSelected));
@@ -1010,12 +1013,17 @@ function TabStartDrag(Node, event) {
 	chrome.runtime.sendMessage({
 		command: "drag_drop",
 		DragNodeClass: "tab",
-		DragTreeDepth: DragTreeDepth
+		DragTreeDepth: tt.DragTreeDepth
 	});
+	
+	if (opt.debug) {
+		log("f: TabStartDrag, Node: "+Node.id+", TabsIdsSelected: "+JSON.stringify(TabsIdsSelected)+", TabsIds: "+JSON.stringify(TabsIds)+", TabsIdsParents: "+JSON.stringify(TabsIdsParents) );
+	}
+	
 }
 
 function TabDragOver(Node, event) {
-	if (DragNodeClass == "tab" && Node.parentNode.classList.contains("dragged_tree") == false) {
+	if (tt.DragNodeClass == "tab" && Node.parentNode.classList.contains("dragged_tree") == false) {
 
 		if (Node.parentNode.classList.contains("pin")) {
 			if (Node.parentNode.classList.contains("before") == false && event.layerX < Node.clientWidth/2) {
@@ -1033,10 +1041,11 @@ function TabDragOver(Node, event) {
 		}
 		
 		if (Node.parentNode.classList.contains("tab")) {
-			let P = (GetParentsByClass(Node, "tab")).length + DragTreeDepth;
-			let PGroup = Node.parentNode.parentNode.parentNode.classList.contains("group");
-			
-			if (Node.parentNode.classList.contains("before") == false && event.layerY < Node.clientHeight/3 && (P <= opt.max_tree_depth+1 || opt.max_tree_depth<0 || PGroup || opt.max_tree_drag_drop == false)) {
+			let PDepth = (GetParentsByClass(Node, "tab")).length + tt.DragTreeDepth;
+			let PIsGroup = Node.parentNode.parentNode.parentNode.classList.contains("group");
+			let PIsDraggedParents = Node.parentNode.classList.contains("dragged_parents");
+
+			if (Node.parentNode.classList.contains("before") == false && event.layerY < Node.clientHeight/3 && (PDepth <= opt.max_tree_depth+1 || opt.max_tree_depth < 0 || PIsGroup || PIsDraggedParents || opt.max_tree_drag_drop == false)) {
 				RemoveHighlight();
 				Node.parentNode.classList.remove("inside");
 				Node.parentNode.classList.remove("after");
@@ -1045,7 +1054,7 @@ function TabDragOver(Node, event) {
 			}
 			
 			
-			if (Node.parentNode.classList.contains("inside") == false && event.layerY > Node.clientHeight/3 && event.layerY <= 2*(Node.clientHeight/3) && (P <= opt.max_tree_depth || opt.max_tree_depth<0 || opt.max_tree_drag_drop == false)) {
+			if (Node.parentNode.classList.contains("inside") == false && event.layerY > Node.clientHeight/3 && event.layerY <= 2*(Node.clientHeight/3) && (PDepth <= opt.max_tree_depth || opt.max_tree_depth < 0 || PIsDraggedParents || opt.max_tree_drag_drop == false)) {
 				RemoveHighlight();
 				Node.parentNode.classList.remove("before");
 				Node.parentNode.classList.remove("after");
@@ -1054,7 +1063,7 @@ function TabDragOver(Node, event) {
 			}
 			
 			
-			if (Node.parentNode.classList.contains("after") == false && Node.parentNode.classList.contains("o") == false && event.layerY > 2*(Node.clientHeight/3) && (P <= opt.max_tree_depth+1 || opt.max_tree_depth<0 || PGroup || opt.max_tree_drag_drop == false)) {
+			if (Node.parentNode.classList.contains("after") == false && Node.parentNode.classList.contains("o") == false && event.layerY > 2*(Node.clientHeight/3) && (PDepth <= opt.max_tree_depth+1 || opt.max_tree_depth < 0 || PIsGroup || PIsDraggedParents || opt.max_tree_drag_drop == false)) {
 				RemoveHighlight();
 				Node.parentNode.classList.remove("inside");
 				Node.parentNode.classList.remove("before");

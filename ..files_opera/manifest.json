@@ -3,7 +3,7 @@
 	"minimum_opera_version": "42",
 	"default_locale": "en",
 	"background": {
-		"page": "background.html",
+		"scripts": [ "listeners_bg.js", "scripts/common.js", "background.js" ],
 		"persistent": true
 	},
 	"name": "Tree Tabs",
@@ -25,5 +25,11 @@
 		"default_title": "Tree Tabs"
 	},
 	"options_page": "options.html",
-	"version": "1.6.0"
+	"commands": {
+		"close_tree": {
+			"suggested_key": { "default": "Alt+W" },
+			"description": "close tree"
+		}
+	},
+	"version": "1.6.1"
 }

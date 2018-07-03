@@ -251,8 +251,7 @@
 
 
 
-
-
+	
 	"options_vivaldi": {
 		"message": " Vivaldi "
 	},
@@ -297,16 +296,16 @@
 		"message": "never"
 	},
 	"options_move_on_url_change_from_empty": {
-		"message": "when URL changes in Home tab (only Home tab created externally, for example, ctrl+t shortcut)"
+		"message": "when URL changes in Home tab (only Home tabs created by ctrl+t shortcut)"
 	},
 	"options_move_on_url_change_from_empty_b": {
-		"message": "when URL changes in Home tab"
+		"message": "when URL changes in any Home tab"
 	},
 	"options_move_on_url_change_all_new": {
 		"message": "when tab is created with a matching URL"
 	},
 	"options_move_on_url_change_always": {
-		"message": "always when URL changes to a matching pattern"
+		"message": "whenever URL changes to a matching pattern"
 	},
 
 	"options_always_show_close": {
@@ -392,16 +391,16 @@
 	
 	
 	"options_append_child_tab": {
-		"message": "Append children tabs at the"
+		"message": "Place children tabs"
 	},
 	"options_append_child_tab_top": {
-		"message": "top (reverse hierarchy)"
+		"message": "at the top (reverse hierarchy)"
 	},
 	"options_append_child_tab_bottom": {
-		"message": "bottom"
+		"message": " at the bottom"
 	},
-	"options_append_child_tab_after_active": {
-		"message": "after active"
+	"options_append_child_tab_after": {
+		"message": "after parent (no automatic tree)"
 	},
 
 	"options_append_orphan_tab": {
@@ -440,7 +439,7 @@
 	},
 
 	"options_append_child_tab_after_limit": {
-		"message": "Once reached tree depth, place tab on the same level, but"
+		"message": "Once reached maximum tree depth, place tab on the same level, but"
 	},
 	"options_append_child_tab_after_limit_top": {
 		"message": "at the top"
@@ -1125,7 +1124,275 @@
 	
 	"manager_window_load_icon": {
 		"message": "Load"
+	},
+
+	"options_Remove_button": {
+		"message": "Remove"
+	},
+
+	"add_tab_group_regex": {
+		"message": "Add"
+	},
+	
+	
+	"tab_title_font_color": {
+		"message": ""
+	},
+	"tab_background": {
+		"message": ""
+	},
+	"tab_border": {
+		"message": ""
+	},
+	"tab_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_hover_background": {
+		"message": ""
+	},
+	"tab_hover_border": {
+		"message": ""
+	},
+	"tab_selected_title_font_color": {
+		"message": ""
+	},
+	"tab_selected_background": {
+		"message": ""
+	},
+	"tab_selected_border": {
+		"message": ""
+	},
+	"tab_selected_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_selected_hover_background": {
+		"message": ""
+	},
+	"tab_selected_hover_border": {
+		"message": ""
+	},
+	"tab_active_title_font_color": {
+		"message": ""
+	},
+	"tab_active_background": {
+		"message": ""
+	},
+	"tab_active_border": {
+		"message": ""
+	},
+	"tab_active_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_active_hover_background": {
+		"message": ""
+	},
+	"tab_active_hover_border": {
+		"message": ""
+	},
+	"tab_active_selected_title_font_color": {
+		"message": ""
+	},
+	"tab_active_selected_background": {
+		"message": ""
+	},
+	"tab_active_selected_border": {
+		"message": ""
+	},
+	"tab_selected_active_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_selected_active_hover_background": {
+		"message": ""
+	},
+	"tab_selected_active_hover_border": {
+		"message": ""
+	},
+	"tab_discarded_title_font_color": {
+		"message": ""
+	},
+	"tab_discarded_background": {
+		"message": ""
+	},
+	"tab_discarded_border": {
+		"message": ""
+	},
+	"tab_discarded_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_discarded_hover_background": {
+		"message": ""
+	},
+	"tab_discarded_hover_border": {
+		"message": ""
+	},
+	"tab_selected_discarded_title_font_color": {
+		"message": ""
+	},
+	"tab_selected_discarded_background": {
+		"message": ""
+	},
+	"tab_selected_discarded_border": {
+		"message": ""
+	},
+	"tab_selected_discarded_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_selected_discarded_hover_background": {
+		"message": ""
+	},
+	"tab_selected_discarded_hover_border": {
+		"message": ""
+	},
+	"tab_filtered_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_background": {
+		"message": ""
+	},
+	"tab_filtered_border": {
+		"message": ""
+	},
+	"tab_filtered_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_hover_background": {
+		"message": ""
+	},
+	"tab_filtered_hover_border": {
+		"message": ""
+	},
+	"tab_filtered_active_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_active_background": {
+		"message": ""
+	},
+	"tab_filtered_active_border": {
+		"message": ""
+	},
+	"tab_filtered_active_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_active_hover_background": {
+		"message": ""
+	},
+	"tab_filtered_active_hover_border": {
+		"message": ""
+	},
+	"tab_filtered_selected_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_selected_background": {
+		"message": ""
+	},
+	"tab_filtered_selected_border": {
+		"message": ""
+	},
+	"tab_filtered_selected_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_selected_hover_background": {
+		"message": ""
+	},
+	"tab_filtered_selected_hover_border": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_background": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_border": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_hover_background": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_hover_border": {
+		"message": ""
+	},
+	"tab_filtered_highlighted_search_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_highlighted_search_background": {
+		"message": ""
+	},
+	"tab_filtered_highlighted_search_border": {
+		"message": ""
+	},
+	"tab_filtered_highlighted_search_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_highlighted_search_hover_background": {
+		"message": ""
+	},
+	"tab_filtered_highlighted_search_hover_border": {
+		"message": ""
+	},
+	"tab_filtered_active_highlighted_search_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_active_highlighted_search_background": {
+		"message": ""
+	},
+	"tab_filtered_active_highlighted_search_border": {
+		"message": ""
+	},
+	"tab_filtered_active_highlighted_search_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_active_highlighted_search_hover_background": {
+		"message": ""
+	},
+	"tab_filtered_active_highlighted_search_hover_border": {
+		"message": ""
+	},
+	"tab_filtered_selected_highlighted_search_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_selected_highlighted_search_background": {
+		"message": ""
+	},
+	"tab_filtered_selected_highlighted_search_border": {
+		"message": ""
+	},
+	"tab_filtered_selected_highlighted_search_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_selected_highlighted_search_hover_background": {
+		"message": ""
+	},
+	"tab_filtered_selected_highlighted_search_hover_border": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_highlighted_search_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_highlighted_search_background": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_highlighted_search_border": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_highlighted_search_hover_title_font_color": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_highlighted_search_hover_background": {
+		"message": ""
+	},
+	"tab_filtered_selected_active_highlighted_search_hover_border": {
+		"message": ""
 	}
+	
+	
+	
+	
+	
+	
 	
 
 	

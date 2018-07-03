@@ -33,9 +33,9 @@ function ApplyTheme(theme) {
 	ApplyTabsMargins(theme["TabsMargins"]);
 	RefreshGUI();
 	
-	for (var groupId in bggroups) {
+	for (var groupId in tt.groups) {
 		let groupTitle = document.getElementById("_gte"+groupId);
-		if (groupTitle != null && bggroups[groupId].font == "") {
+		if (groupTitle != null && tt.groups[groupId].font == "") {
 			groupTitle.style.color = "";
 		}
 	}
@@ -88,6 +88,28 @@ function ApplyTabsMargins(size){
 	}
 }
 
+function GetCurrentToolbar(storage) {
+	if (storage["toolbar"]) {
+		return storage["toolbar"];
+	} else {
+		return DefaultToolbar;
+	}
+}
+
+
+function GetCurrentTheme(storage) {
+	if (storage["current_theme"] && storage["themes"] && storage["themes"][storage["current_theme"]]) {
+		let theme = storage["themes"][storage["current_theme"]];
+		let correctedTheme = CheckTheme(theme);
+			if (correctedTheme.theme_version < 4 && storage["preferences"].show_toolbar == undefined) {
+				opt.show_toolbar = correctedTheme.ToolbarShow;
+				SavePreferences();
+			}
+		return correctedTheme;
+	} else {
+		return DefaultTheme;
+	}
+}
 
 // OPTIONS PAGE
 function LoadTheme(ThemeId, reloadInSidebar) {

@@ -5,57 +5,98 @@
 
 function RecheckFirefox() {
 	chrome.tabs.query({pinned: false, currentWindow: true}, function(tabs) {
-		let last_tabId = tabs[tabs.length-1].id;
-		let p = [];
-		let p_tt = [];
-		let t_ref = {};
-		let t_ind = 0;
-		let ok = 0;
-		let ti = 0;
-		let tc = tabs.length;
-		for (ti = 0; ti < tc; ti++) {
-			let tabId = tabs[ti].id;
-			p.push("");
-			p_tt.push("");
-			let t = Promise.resolve(browser.sessions.getTabValue(tabId, "TTdata")).then(function(TabData) {
-				if (TabData != undefined) {
-					t_ref[TabData.ttid] = tabs[t_ind].id;
-					p_tt[t_ind] = TabData.parent_ttid;
-					p[t_ind] = TabData.parent;
-				}
-				t_ind++;
-				if (tabId == last_tabId) {
-					let i = 0;
-					for (i = 0; i < p.length; i++) {
-						if (t_ref[p_tt[i]]) {
-							p[i] = t_ref[p_tt[i]];
-						}						
+		if (tabs.length > 1) {
+			let last_tabId = tabs[tabs.length-1].id;
+			let p = [];
+			let p_tt = [];
+			let t_ref = {};
+			let t_ind = 0;
+			let ok = 0;
+			let ti = 0;
+			let tc = tabs.length;
+			for (ti = 0; ti < tc; ti++) {
+				let tabId = tabs[ti].id;
+				p.push("");
+				p_tt.push("");
+				let t = Promise.resolve(browser.sessions.getTabValue(tabId, "TTdata")).then(function(TabData) {
+					if (TabData != undefined) {
+						t_ref[TabData.ttid] = tabs[t_ind].id;
+						p_tt[t_ind] = TabData.parent_ttid;
+						p[t_ind] = TabData.parent;
 					}
-					for (i = 0; i < p.length; i++) {
-						let Tab = document.getElementById(tabs[i].id);
-						if (Tab && p[i] == Tab.parentNode.parentNode.id) {
-							ok++;
+					t_ind++;
+					if (tabId == last_tabId) {
+						let i = 0;
+						for (i = 0; i < p.length; i++) {
+							if (t_ref[p_tt[i]]) {
+								p[i] = t_ref[p_tt[i]];
+							}						
+						}
+						for (i = 0; i < p.length; i++) {
+							let Tab = document.getElementById(tabs[i].id);
+							if (Tab && p[i] == Tab.parentNode.parentNode.id) {
+								ok++;
+							}
+						}
+						if (ok < tabs.length*0.5) {
+							if (opt.debug) {
+								log("emergency reload");
+							}
+							chrome.storage.local.set({emergency_reload: true});
+							chrome.runtime.sendMessage({command: "reload"});
+							chrome.runtime.sendMessage({command: "reload_sidebar"});
+							location.reload();
+						} else {
+							if (opt.debug) {
+								log("f: RecheckFirefox, ok");
+							}
 						}
 					}
-					if (ok < tabs.length*0.5) {
-						if (opt.debug) {
-							log("emergency reload");
-						}
-						chrome.storage.local.set({emergency_reload: true});
-						chrome.runtime.sendMessage({command: "reload"});
-						chrome.runtime.sendMessage({command: "reload_sidebar"});
-						location.reload();
-					} else {
-						if (opt.debug) {
-							log("f: RecheckFirefox, ok");
-						}
-					}
-				}
-			});
+				});
+			}
 		}
 	});
 }
 
+function SavePreferences() {
+	chrome.storage.local.set({preferences: opt});
+	chrome.runtime.sendMessage({command: "reload_options", opt: opt});
+}
+
+function LoadDefaultPreferences() {
+	opt = Object.assign({}, DefaultPreferences);
+}
+
+function ShowOpenFileDialog(extension) {
+	let body = document.getElementById("body");
+	let inp = document.createElement("input");
+	inp.id = "file_import";
+	inp.type = "file";
+	inp.accept = extension;
+	inp.style.display = "none";
+	body.appendChild(inp);
+	inp.click();
+	return inp;
+}
+
+function SaveFile(filename, extension, data) {
+	let file = new File([JSON.stringify(data)], filename+"."+extension, {type: "text/"+extension+";charset=utf-8"} );
+	let body = document.getElementById("body");
+	let savelink = document.createElement("a");
+	savelink.href = URL.createObjectURL(file);
+	savelink.fileSize = file.size;
+	savelink.target = "_blank";
+	savelink.style.display = "none";
+	savelink.type = "file";
+	savelink.download = filename+"."+extension;
+	body.appendChild(savelink);
+	setTimeout(function() {
+		savelink.click();
+		setTimeout(function() {
+			savelink.parentNode.removeChild(savelink);
+		}, 60000);
+	}, 10);
+}
 
 function AppendToNode(Node, AppendNode) {
 	if (Node != null && AppendNode != null) {
@@ -86,6 +127,7 @@ function HideRenameDialogs() {
 		s.style.left = "-500px";
 	});
 }
+
 function GetParentsByClass(Node, Class) {
 	let Parents = [];
 	let ParentNode = Node;
@@ -97,6 +139,7 @@ function GetParentsByClass(Node, Class) {
 	}
 	return Parents;
 }
+
 function GetParentsBy2Classes(Node, ClassA, ClassB) {
 	let Parents = [];
 	let ParentNode = Node;
@@ -129,12 +172,12 @@ function GetSelectedFolders() {
 	}
 	
 	let res = {Folders: {}, FoldersSelected: [], TabsIds: [], TabsIdsParents: []};
-	document.querySelectorAll("#"+active_group+" .selected_folder").forEach(function(s){
+	document.querySelectorAll("#"+tt.active_group+" .selected_folder").forEach(function(s){
 		res.FoldersSelected.push(s.id);
-		res.Folders[s.id] = Object.assign({}, bgfolders[s.id]);
+		res.Folders[s.id] = Object.assign({}, tt.folders[s.id]);
 		let Fchildren = document.querySelectorAll("#cf"+s.id+" .folder");
 		Fchildren.forEach(function(fc){
-			res.Folders[fc.id] = Object.assign({}, bgfolders[fc.id]);
+			res.Folders[fc.id] = Object.assign({}, tt.folders[fc.id]);
 		});
 		let Tchildren = document.querySelectorAll("#ct"+s.id+" .tab");
 		Tchildren.forEach(function(tc){
@@ -146,32 +189,19 @@ function GetSelectedFolders() {
 }
 
 function GetSelectedTabs() {
-	// let res = {urls: [], TabsIds: [], TabsIdsParents: [], TabsIdsSelected: []};
 	let res = {TabsIds: [], TabsIdsParents: [], TabsIdsSelected: []};
-	document.querySelectorAll(".pin.selected_tab, #"+active_group+" .selected_tab").forEach(function(s){
-		// chrome.tabs.get(parseInt(s.id), function(tab) {
-			// res.urls.push(tab.url);
-		// });
-		
+	document.querySelectorAll(".pin.selected_tab, #"+tt.active_group+" .selected_tab").forEach(function(s){
 		res.TabsIds.push(parseInt(s.id));
 		res.TabsIdsParents.push(s.parentNode.id);
 		res.TabsIdsSelected.push(parseInt(s.id));
 		let Tchildren = document.querySelectorAll("#ct"+s.id+" .tab");
 		Tchildren.forEach(function(tc){
-			
-			// chrome.tabs.get(parseInt(tc.id), function(tab) {
-				// res.urls.push(tab.url);
-			// });
-			
 			res.TabsIds.push(parseInt(tc.id));
 			res.TabsIdsParents.push(tc.parentNode.id);
 		});
 	});
 	return res;
 }
-
-
-
 
 
 function FindTab(input) { // find and select tabs
@@ -189,83 +219,49 @@ function FindTab(input) { // find and select tabs
 		return;
 	} else {
 		ButtonFilterClear.style.opacity = "1";
-		ButtonFilterClear.title = caption_clear_filter;
+		ButtonFilterClear.title = labels.clear_filter;
 	}
-	SearchIndex = 0;
+	tt.SearchIndex = 0;
 	let FilterType = document.getElementById("button_filter_type");
 	let searchUrl = FilterType.classList.contains("url");
 	let searchTitle = FilterType.classList.contains("title");
-	chrome.tabs.query({windowId: CurrentWindowId, pinned: false}, function(tabs) {
+	
+	let query = {windowId: tt.CurrentWindowId, pinned: false};
+	if (input == "*audible") {
+		query = {windowId: tt.CurrentWindowId, discarded: false, audible: true,  muted: false, pinned: false};
+	}
+	if (input == "*muted") {
+		query = {windowId: tt.CurrentWindowId, discarded: false, muted: true, pinned: false};
+	}
+	if (input == "*unloaded") {
+		query = {windowId: tt.CurrentWindowId, discarded: true, pinned: false};
+	}
+	if (input == "*loaded") {
+		query = {windowId: tt.CurrentWindowId, discarded: false, pinned: false};
+	}
+		
+	chrome.tabs.query(query, function(tabs) {
 		tabs.forEach(function(Tab) {
-			if (searchUrl) {
-				if (Tab.url.toLowerCase().match(input.toLowerCase())) {
-					document.getElementById(Tab.id).classList.add("filtered");
-					document.getElementById(Tab.id).classList.add("selected_tab");
+			if (input == "*audible" || input == "*muted" || input == "*unloaded" || input == "*loaded") {
+				document.getElementById(Tab.id).classList.add("filtered");
+				document.getElementById(Tab.id).classList.add("selected_tab");
+			} else {
+				if (searchUrl) {
+					if (Tab.url.toLowerCase().match(input.toLowerCase())) {
+						document.getElementById(Tab.id).classList.add("filtered");
+						document.getElementById(Tab.id).classList.add("selected_tab");
+					}
 				}
-			}
-			if (searchTitle) {
-				if (Tab.title.toLowerCase().match(input.toLowerCase())) {
-					document.getElementById(Tab.id).classList.add("filtered");
-					document.getElementById(Tab.id).classList.add("selected_tab");
+				if (searchTitle) {
+					if (Tab.title.toLowerCase().match(input.toLowerCase())) {
+						document.getElementById(Tab.id).classList.add("filtered");
+						document.getElementById(Tab.id).classList.add("selected_tab");
+					}
 				}
 			}
 		});
 	});
 }
-// sort tabs main function
-// function SortTabs() {
-	// if ($(".tab").find(":visible:first")[0]){
-		// chrome.tabs.query({windowId: vt.windowId}, function(tabs){
-			// tabs.sort(function(tab_a, tab_b){
-				// return SplitUrl(tab_a).localeCompare(     SplitUrl(tab_b)      );
-			// });
-			// var first_tabId;
-			// if ($(".selected:visible")[0]){
-				// first_tabId = parseInt($(".selected:visible")[0].id);
-			// } else {
-				// first_tabId = parseInt($(".tab").find(":visible:first")[0].parentNode.id);
-			// }
-			// chrome.tabs.get(first_tabId, function(tab){
-				// var new_index = tab.index;
-				// tabs.forEach(function(Tab){
-					// // sort selected when more than 1 tab is selected
-					// if (($(".selected:visible").length > 1 && $("#"+Tab.id).is(":visible") && !Tab.pinned && $("#"+Tab.id).is(".selected")) || ($(".selected:visible").length < 2 && $("#"+Tab.id).is(":visible") && !Tab.pinned)){
-						// chrome.tabs.move(Tab.id, {"index": new_index});
-						// new_index++;
-					// }
-				// });
-			// });
-			// if (bg.opt.scroll_to_active){
-				// setTimeout(function(){
-					// ScrollTabList($(".active:visible")[0].id);
-				// },1000);
-			// }
-		// }); 
-	// }
-// }
-
-// sort tabs sub function
-// function SplitUrl(tab) {
-	// var tmp_url = new URL(tab.url);
-	// if (tmp_url.protocol != "http:"){
-		// tmp_url.protocol == "http:";
-	// }
-	// var url_parts = [];
-	// if (tab.pinned){
-		// url_parts.push("#"+tab.index);
-	// } else {
-		// url_parts.push("~");
-	// }
-	// var parts = tmp_url.host.split(".");
-	// parts.reverse();
-	// if (parts.length > 1){
-		// parts = parts.slice(1);
-	// }
-	// parts.join(".");
-	// url_parts.push(parts);
-	// url_parts.push(tab.title.toLowerCase());
-	// return url_parts.join(" ! ");
-// }
 
 function Bookmark(rootNode) {
 	let ToolbarId = browserId == "F" ? "toolbar_____" : "1";
@@ -302,12 +298,12 @@ function Bookmark(rootNode) {
 				}
 				
 				if (rootNode.classList.contains("folder") || rootNode.classList.contains("group")) {
-					let rootName = caption_noname_group;
-					if (rootNode.classList.contains("folder") && bgfolders[rootNode.id]) {
-						rootName = bgfolders[rootNode.id].name;
+					let rootName = labels.noname_group;
+					if (rootNode.classList.contains("folder") && tt.folders[rootNode.id]) {
+						rootName = tt.folders[rootNode.id].name;
 					}
-					if (rootNode.classList.contains("group") && bggroups[rootNode.id]) {
-						rootName = bggroups[rootNode.id].name;
+					if (rootNode.classList.contains("group") && tt.groups[rootNode.id]) {
+						rootName = tt.groups[rootNode.id].name;
 					}
 
 					chrome.bookmarks.create({parentId: TreeTabsId, title: rootName}, function(root) {
@@ -315,10 +311,10 @@ function Bookmark(rootNode) {
 						
 						let folders = document.querySelectorAll("#cf"+rootNode.id+" .folder");
 						folders.forEach(function(s){
-							if (bgfolders[s.id]) {
+							if (tt.folders[s.id]) {
 								let ttId = s.id;
-								chrome.bookmarks.create({parentId: root.id, title: bgfolders[ttId].name}, function(Bkfolder) {
-									foldersRefs[ttId] = {ttid: ttId, id: Bkfolder.id, ttparent: bgfolders[ttId].parent, parent: root.id};
+								chrome.bookmarks.create({parentId: root.id, title: tt.folders[ttId].name}, function(Bkfolder) {
+									foldersRefs[ttId] = {ttid: ttId, id: Bkfolder.id, ttparent: tt.folders[ttId].parent, parent: root.id};
 									
 									let elemInd = 0;
 									if (ttId == folders[folders.length-1].id) {
@@ -370,4 +366,36 @@ function Bookmark(rootNode) {
 			}
 		});
 	});
+}
+
+function ShowStatusBar(p) { // show, spinner, message
+	let status_bar = document.getElementById("status_bar");
+	let busy_spinner = document.getElementById("busy_spinner");
+	let status_message = document.getElementById("status_message");
+	if (p.show) {
+		status_bar.style.display = "block";
+		status_message.textContent = p.message;
+		if (p.spinner) {
+			busy_spinner.style.opacity = "1";
+		} else {
+			busy_spinner.style.opacity = "0";
+		}
+	} else {
+		busy_spinner.style.opacity = "0";
+		status_message.textContent = "";
+		status_bar.style.display = "none";
+	}
+	if (p.hideTimeout) {
+		setTimeout(function() {
+			busy_spinner.style.opacity = "0";
+			status_message.textContent = "";
+			status_bar.style.display = "none";
+		}, p.hideTimeout);
+	}
+}
+
+function log(log) {
+	if (opt.debug) {
+		chrome.runtime.sendMessage({command: "debug", log: log});
+	}
 }

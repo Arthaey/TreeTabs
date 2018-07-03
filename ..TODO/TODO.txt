@@ -1,33 +1,58 @@
+CHANGES:
+1. shortcut to open TreeTabs Sidebar is now F1
+2. log does not preserve any personal data (urls) for GDPR law
+
+NEW:
+1. you can now drag&drop entire group to another window
+2. tree structure is tracked in background (excluded closing tabs)
+3. added alt+w shortcut to close a tree of tabs
+4. creating folder will now prompt for a new name
+5. search for *audible, *muted, *unloaded, *loaded tabs! Just write *audible in search box!
+
+
 FIXES:
-deny Drag&drop tab to root of folders
-"Never show close button" option was breaking theme preview/editor
-closing pinned tabs did not resize area of pinned tabs, leaving empty space below
-added "bookmark" menu for single tab
-clone pinned tab was added as not pinned (only in Firefox)
-Shortcut changed to Ctrl+F2
-export session file has now date as a name
+1. import window was not showing up
+2. export group and export session had file extension in name
+3. pin tree had bug in setting class
 
 
 
 
 
+FEATURES TO DO
 
-instruction to add popup
+opt.promote_children_in_first_child true, to work from background! also for message.command == "tab_detached"
+
+manager: add save/import/export window
+
+discard on import group and import session
+
+Shift + mouse scroll to switch between groups
+
+unread tabs
+
 line for children hierarchy (like at the beggining)
 "undo close" as a possible action with middle click on empty space
 
+return to the first tab with mousewheel when we are at the bottom list (loop) - "mousewheel scroll on the last tab allow to return to the first one"
 
-DRAG&DROP TO ANOTHER WINDOW OF THE ENTIRE GROUP
+mute icon config option (disable animation)
+
+FIREFOX CONTAINERS
+
 
 undo close to restore trees (will work ONLY in firefox)
 Close tab on Middle mouse click and not On Middle mouse down
 Split Pin size in theme
 
 
+unread state?
+Unread Tabs Color/Style
+automatic different color for each tree
+
 add groups scrolling arrows
 add textbox for ungrouped name in options
 option for scrollbar on the left
-unread state?
 
 menu: copy urls of the selected tabs
 menu: bookmark selected tabs/tree
@@ -44,16 +69,14 @@ maybe filter tabs on search
 
 
 font size
-hibernate group
 
 double click on tab actions selection like double click to be able to expand child tab.
- I want you to be able to display the tab number count on the right end
+I want you to be able to display the tab number count on the right end
 customizable menu
 
 import session to unload tabs immediately
 bind groups to FF containers
 
-Unread Tabs Color/Style
 Give back group color (like it was before)
 
 
@@ -63,8 +86,6 @@ folders collapsed by default or make this optional
 
 
 when actived tab located in folder, all tabs operation related with creating new tab (such as clone of tab in folder, new tab) must work only in current folder.
-
-New tab in selected folder!
 
 
 separate option for close folder (close or promote children)
@@ -81,7 +102,7 @@ Accept BCH (BitcoinCash) donations as the FEES make it FAR more palatable to don
 - Like many other commenters suggested, it would be wonderful to see some indication of the container a tab was opened in, if any. Getting an option to directly be able to chose to open a new tab in a container would also be very useful. 
 
 
-I don't understand those from comments
+I DON'T UNDERSTAND THOSE FROM COMMENTS
 - add possibility open all tabs in folder in new left tab group with deleting this folder;
 - for economy memory your tabs must to makings (html code) during activating left tab group or during unfold folders/trees;
 - real FF tabs must creating and linking only after activate your tabs;

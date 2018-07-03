@@ -83,7 +83,7 @@ function AddGroupToManagerList(hibernated_group) {
 		if (event.which == 1) {
 			let HibernategGroupIndex = Array.from(this.parentNode.parentNode.children).indexOf(this.parentNode);
 			chrome.storage.local.get(null, function(storage) {
-				let filename = storage.hibernated_groups[HibernategGroupIndex].group.name == "" ? caption_noname_group : storage.hibernated_groups[HibernategGroupIndex].group.name;
+				let filename = storage.hibernated_groups[HibernategGroupIndex].group.name == "" ? labels.noname_group : storage.hibernated_groups[HibernategGroupIndex].group.name;
 				SaveFile(filename, "tt_group", storage.hibernated_groups[HibernategGroupIndex]);
 			});
 		}
@@ -166,7 +166,7 @@ function AddSessionToManagerList(saved_session) {
 			let saved_session = this.parentNode;
 			let SessionIndex = Array.from(saved_session.parentNode.children).indexOf(saved_session);
 			chrome.storage.local.get(null, function(storage) {
-				let filename = storage.saved_sessions[SessionIndex].name == "" ? caption_noname_group : storage.saved_sessions[SessionIndex].name;
+				let filename = storage.saved_sessions[SessionIndex].name == "" ? labels.noname_group : storage.saved_sessions[SessionIndex].name;
 				SaveFile(filename, "tt_session", storage.saved_sessions[SessionIndex].session);
 			});
 		}
@@ -326,9 +326,9 @@ function SetManagerEvents() {
 	}
 	document.getElementById("manager_window_button_hibernate_group").onmousedown = function(event) {
 		if (event.which == 1) {
-			ExportGroup(active_group, false, true);
+			ExportGroup(tt.active_group, false, true);
 			setTimeout(function() {
-				GroupRemove(active_group, true);
+				GroupRemove(tt.active_group, true);
 			}, 100);
 			setTimeout(function() {
 				OpenManagerWindow();
@@ -366,7 +366,7 @@ function SetManagerEvents() {
 	autosessions_save_timer.oninput = function(event) {
 		opt.autosave_interval = parseInt(this.value);
 		SavePreferences();
-		clearInterval(AutoSaveSession);
+		clearInterval(tt.AutoSaveSession);
 		StartAutoSaveSession();
 	}
 

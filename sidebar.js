@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", Run(), false);
 
 
 function Run() {
+	ShowStatusBar({show: true, spinner: true, message: "Starting up"});
 	chrome.runtime.sendMessage({command: "is_bg_ready"}, function(response) {
 		if (response == true) {
 			Initialize();
@@ -18,10 +19,9 @@ function Run() {
 }
 
 function Initialize() {
-	
-	chrome.tabs.query({currentWindow: true}, function(tabs) {
-		CurrentWindowId = tabs[0].windowId;
-
+	chrome.windows.getCurrent({populate: true}, function(window) {
+		tt.CurrentWindowId = window.id;
+		let tabs = window.tabs;
 		chrome.storage.local.get(null, function(storage) {
 			GetCurrentPreferences(storage);
 		
@@ -34,40 +34,40 @@ function Initialize() {
 				RestoreToolbarSearchFilter();
 			}
 			
-			chrome.runtime.sendMessage({command: "get_browser_tabs"}, function(response) {
-				let bgtabs = Object.assign({}, response);
-				chrome.runtime.sendMessage({command: "get_folders", windowId: CurrentWindowId}, function(response) {
-					bgfolders = Object.assign({}, response);
-					chrome.runtime.sendMessage({command: "get_groups", windowId: CurrentWindowId}, function(response) {
-						bggroups = Object.assign({}, response);
+			chrome.runtime.sendMessage({command: "get_browser_tabs"}, function(bgtabs) {
+				chrome.runtime.sendMessage({command: "get_folders", windowId: tt.CurrentWindowId}, function(f) {
+					tt.folders = Object.assign({}, f);
+					chrome.runtime.sendMessage({command: "get_groups", windowId: tt.CurrentWindowId}, function(g) {
+						tt.groups = Object.assign({}, g);
 						// APPEND GROUPS
-						AppendGroups(bggroups);
+						AppendGroups(tt.groups);
 						// APPEND FOLDERS
-						AppendFolders(bgfolders);
+						AppendFolders(tt.folders);
 						// APPEND TABS
 						let ti = 0;
 						let tc = tabs.length;
+						let ttTabs = [];
+					
 						for (ti = 0; ti < tc; ti++) {
-							AppendTab(tabs[ti], false, false, false, true, false, true, false, true, false, false);
+							ttTabs.push(AppendTab({  tab: tabs[ti], Append: true, SkipSetActive: true, AdditionalClass: (bgtabs[tabs[ti].id].expand != "" ? bgtabs[tabs[ti].id].expand : undefined)  }));
 						}
-						for (ti = 0; ti < tc; ti++) {
-							if (bgtabs[tabs[ti].id] && !tabs[ti].pinned) {
-								let TabParent = document.getElementById("ct"+bgtabs[tabs[ti].id].parent) ;
-								if (TabParent != null && document.querySelector("[id='"+tabs[ti].id+"'] #ct"+bgtabs[tabs[ti].id].parent) == null) {
-									TabParent.appendChild(document.getElementById(tabs[ti].id));
+				
+						if (opt.skip_load == false) {
+							for (ti = 0; ti < tc; ti++) {
+								if (bgtabs[tabs[ti].id] && !tabs[ti].pinned) {
+									let TabParent = document.getElementById("ct"+bgtabs[tabs[ti].id].parent);
+									if (TabParent != null && document.querySelector("[id='"+tabs[ti].id+"'] #ct"+bgtabs[tabs[ti].id].parent) == null) {
+										TabParent.appendChild(ttTabs[ti]);
+									}
 								}
 							}
 						}
-						for (ti = 0; ti < tc; ti++) {
-							if (bgtabs[tabs[ti].id] && !tabs[ti].pinned && bgtabs[tabs[ti].id].expand != "") {
-								document.getElementById(tabs[ti].id).classList.add(bgtabs[tabs[ti].id].expand);
-							}
-						}
-						// SET ACTIVE TAB FOR EACH GROUP
+						// SET ACTIVE TAB FOR EACH GROUP, REARRENGE EVERYTHING AND START BROWSER LISTENERS
 						SetActiveTabInEachGroup();
-						RearrangeTreeTabs(tabs, bgtabs, true);
 						RearrangeFolders(true);
-						StartChromeListeners();
+						RearrangeTreeTabs(bgtabs, true);
+						StartSidebarListeners();
+	
 						SetMenu();
 						SetEvents();
 						SetManagerEvents();
@@ -83,6 +83,7 @@ function Initialize() {
 						if (browserId == "V") {
 							VivaldiRefreshMediaIcons();
 						}
+						
 						setTimeout(function() {
 							RefreshExpandStates();
 							RefreshCounters();
@@ -91,14 +92,10 @@ function Initialize() {
 								RecheckFirefox();
 							}
 						}, 1000);
+						ShowStatusBar({show: true, spinner: false, message: "Ready.", hideTimeout: 2000});
 						setTimeout(function() {
 							UpdateData();
-							delete debug;
-							delete running;
-							delete schedule_save;
-							delete windows;
-							delete tabs;
-							delete tt_ids;
+							delete b;
 							delete DefaultToolbar;
 							delete DefaultTheme;
 							delete DefaultPreferences;
@@ -107,9 +104,9 @@ function Initialize() {
 							}
 						}, 5000);
 						if (browserId != "F") {
-							if (Object.keys(storage["windows_BAK1"]).length > 0 && document.getElementById("button_load_bak1") != null) { document.getElementById("button_load_bak1").classList.remove("disabled"); }
-							if (Object.keys(storage["windows_BAK2"]).length > 0 && document.getElementById("button_load_bak2") != null) { document.getElementById("button_load_bak2").classList.remove("disabled"); }
-							if (Object.keys(storage["windows_BAK3"]).length > 0 && document.getElementById("button_load_bak3") != null) { document.getElementById("button_load_bak3").classList.remove("disabled"); }
+							if (storage.windows_BAK1 && Object.keys(storage["windows_BAK1"]).length > 0 && document.getElementById("button_load_bak1") != null) { document.getElementById("button_load_bak1").classList.remove("disabled"); }
+							if (storage.windows_BAK2 && Object.keys(storage["windows_BAK2"]).length > 0 && document.getElementById("button_load_bak2") != null) { document.getElementById("button_load_bak2").classList.remove("disabled"); }
+							if (storage.windows_BAK3 && Object.keys(storage["windows_BAK3"]).length > 0 && document.getElementById("button_load_bak3") != null) { document.getElementById("button_load_bak3").classList.remove("disabled"); }
 						}
 					});
 				});

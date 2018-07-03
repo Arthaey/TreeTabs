@@ -7,10 +7,7 @@
 var current_theme = "";
 var themes = [];
 var SelectedTheme = Object.assign({}, DefaultTheme);
-
-
-var dragged_button;
-active_group = "tab_list";
+var dragged_button = {id: ""};
 
 // options for all drop down menus
 let DropDownList = ["dbclick_folder", "midclick_folder", "midclick_tab", "dbclick_group", "midclick_group", "dbclick_tab", "append_child_tab", "append_child_tab_after_limit", "append_orphan_tab", "after_closing_active_tab", "move_tabs_on_url_change"];
@@ -19,6 +16,10 @@ document.addEventListener("DOMContentLoaded", function() {
 	document.title = "Tree Tabs";
 	chrome.storage.local.get(null, function(storage) {
 		
+		AppendGroupToList("tab_list", labels.ungrouped_group, "", false);
+		AppendGroupToList("tab_list2", labels.noname_group, "", false);
+		AppendSampleTabs();
+	
 		GetCurrentPreferences(storage);
 
 		if (storage["themes"]) {
@@ -45,9 +46,6 @@ document.addEventListener("DOMContentLoaded", function() {
 		RefreshFields();
 		SetEvents();
 
-		AppendGroupToList("tab_list", caption_ungrouped_group, "", false);
-		AppendGroupToList("tab_list2", caption_noname_group, "", false);
-		AppendSampleTabs();
 	
 		setTimeout(function() {
 			document.querySelectorAll(".on").forEach(function(s){
@@ -93,7 +91,7 @@ function AddRegexPair() {
 	deleteButton.type = "button";
 	deleteButton.style.width = '75px';
 	deleteButton.className = "set_button theme_buttons";
-	deleteButton.value = "Remove";
+	deleteButton.value = chrome.i18n.getMessage("options_Remove_button");
 	deleteButton.onclick = function() { regexes.removeChild(outer); }
 	outer.appendChild(deleteButton);
 	
@@ -142,6 +140,7 @@ function GetOptions(storage) {
 				break;
 			}
 		}
+		RefreshFields();
 	}
 	
 	for (let i = 0; i < opt.tab_group_regexes.length; i++) {
@@ -638,9 +637,10 @@ function SetEvents() {
 	for (let i = 0; i < DropDownList.length; i++) {
 		document.getElementById(DropDownList[i]).onchange = function(event) {
 			opt[this.id] = this.value;
-			SavePreferences();
+			RefreshFields();
 			setTimeout(function() {
-				chrome.runtime.sendMessage({command: "reload_sidebar"});
+				SavePreferences();
+				// chrome.runtime.sendMessage({command: "reload_sidebar"});
 			}, 50);
 		}
 	}
@@ -648,9 +648,8 @@ function SetEvents() {
 	// set tabs tree depth option
 	document.getElementById("max_tree_depth").oninput = function(event) {
 		opt.max_tree_depth = parseInt(this.value);
-		SavePreferences();
 		setTimeout(function() {
-			chrome.runtime.sendMessage({command: "reload_sidebar"});
+			SavePreferences();
 		}, 50);
 	}
 	
@@ -892,7 +891,7 @@ function SetEvents() {
 // ----------------------EXPORT DEBUG LOG---------------------------------------------------------------------------------	
 	document.getElementById("options_export_debug").onclick = function(event) {if (event.which == 1) {
 		chrome.storage.local.get(null, function(storage) {
-			SaveFile("TreeTabs", "log", storage);
+			SaveFile("TreeTabs", "log", storage.debug_log);
 		});
 	}}
 
@@ -930,6 +929,7 @@ function SetEvents() {
 			location.reload();
 		}, 100);
 	}}
+
 }
 
 function RemoveToolbarEditEvents() {
@@ -1001,6 +1001,74 @@ function copyStringToClipboard(string) {
 	document.addEventListener('copy', handler, true);
 	document.execCommand('copy');
 }
+
+
+// shrink or expand theme field
+function RefreshFields() {
+	if (document.getElementById("theme_list").options.length == 0) {
+		document.getElementById("field_theme").style.height = "45px";
+	} else {
+		document.getElementById("field_theme").style.height = "";
+	}
+	if (browserId == "F") {
+		document.querySelectorAll("#scrollbar_size_indicator, #scrollbar_thumb, #scrollbar_thumb_hover, #scrollbar_track").forEach(function(s){
+			s.style.display = "none";
+		});
+	} else {
+		document.querySelectorAll("#firefox_option_hide_other_groups_tabs_firefox").forEach(function(s){
+			s.style.display = "none";
+		});
+	}
+	if (browserId == "V") {
+		let WebPanelUrlBox = document.getElementById("url_for_web_panel");
+		WebPanelUrlBox.value = (chrome.runtime.getURL("sidebar.html"));
+		WebPanelUrlBox.setAttribute("readonly", true);
+		document.getElementById("field_vivaldi").style.display = "block";
+	}
+	if (document.getElementById("show_toolbar").checked) {
+		document.querySelectorAll("#options_available_buttons, #sample_toolbar_block, #options_reset_toolbar_button").forEach(function(s){
+			s.style.display = "";
+		});
+		document.getElementById("options_toolbar_look").style.display = "";
+		document.getElementById("field_show_toolbar").style.height = "";
+	} else{
+		document.querySelectorAll("#options_available_buttons, #sample_toolbar_block, #options_reset_toolbar_button").forEach(function(s){
+			s.style.display = "none";
+		});
+		document.getElementById("options_toolbar_look").style.display = "none";
+		document.getElementById("field_show_toolbar").style.height = "6";
+	}
+	
+	
+	if (document.getElementById("append_child_tab").value == "after") {
+		document.getElementById("append_child_tab_after_limit_dropdown").style.display = "none";
+		document.getElementById("options_append_orphan_tab_as_child").style.display = "none";
+
+		if (opt.append_child_tab == "after" && opt.append_orphan_tab == "as_child") {
+			opt.append_orphan_tab = "after_active";
+			document.getElementById("append_orphan_tab").value = "after_active";
+			SavePreferences();
+		}
+		
+	} else {
+		document.getElementById("append_child_tab_after_limit_dropdown").style.display = "";
+		document.getElementById("options_append_orphan_tab_as_child").style.display = "";
+	}
+}
+
+function RefreshGUI() {
+	let button_filter_type = document.getElementById("button_filter_type");
+	if (button_filter_type != null) {
+		button_filter_type.classList.add("url");
+		button_filter_type.classList.remove("title");
+	}
+	if (document.querySelector(".on") != null) {
+		document.getElementById("toolbar").style.height = "53px";
+	} else {
+		document.getElementById("toolbar").style.height = "26px";
+	}
+}
+
 
 
 // dummy functions
