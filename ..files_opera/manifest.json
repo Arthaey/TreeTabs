@@ -3,7 +3,7 @@
 	"minimum_opera_version": "42",
 	"default_locale": "en",
 	"background": {
-		"scripts": [ "listeners_bg.js", "scripts/common.js", "background.js" ],
+		"scripts": [ "global.js", "./scripts/preferences.js", "background_firefox.js", "background_opera.js", "background_vivaldi.js", "background.js" ],
 		"persistent": true
 	},
 	"name": "Tree Tabs",
@@ -24,12 +24,12 @@
 		"default_panel": "sidebar.html",
 		"default_title": "Tree Tabs"
 	},
-	"options_page": "options.html",
+	"options_page": "options/options.html",
 	"commands": {
 		"close_tree": {
 			"suggested_key": { "default": "Alt+W" },
 			"description": "close tree"
 		}
 	},
-	"version": "1.7.2"
+	"version": "1.8.6"
 }

@@ -1,708 +1,538 @@
-// Copyright (c) 2017 kroppy. All rights reserved.
-// Use of this source code is governed by a Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) license
-// that can be found at https://creativecommons.org/licenses/by-nc-nd/4.0/
-
-// **********             TOOLBAR           ***************
-
-// RESTORE LAST USED SEARCH TYPE (URL OR TITLE) IN TOOLBAR SEARCH
-function RestoreToolbarSearchFilter() {
-	chrome.runtime.sendMessage({command: "get_search_filter", windowId: tt.CurrentWindowId}, function(response) {
-		let ButtonFilter = document.getElementById("button_filter_type");
-		if (response == "url") {
-			ButtonFilter.classList.add("url");
-			ButtonFilter.classList.remove("title");
-		} else {
-			ButtonFilter.classList.add("title");
-			ButtonFilter.classList.remove("url");
-		}
-	});
-}	
-
-// RESTORE LAST ACTIVE SHELF (SEARCH, TOOLS, GROUPS, SESSION OR FOLDER) IN TOOLBAR
-function RestoreToolbarShelf() {
-	chrome.runtime.sendMessage({command: "get_active_shelf", windowId: tt.CurrentWindowId}, function(response) {
-		let filterBox = document.getElementById("filter_box");
-		filterBox.setAttribute("placeholder", labels.searchbox);
-		filterBox.style.opacity = "1";
-		
-		document.querySelectorAll(".on").forEach(function(s){
-			s.classList.remove("on");
-		});
-		document.querySelectorAll(".toolbar_shelf").forEach(function(s){
-			s.classList.add("hidden");
-		});
-
-		if (response == "search" && document.getElementById("button_search") != null) {
-			document.getElementById("toolbar_search").classList.remove("hidden");
-			document.getElementById("button_search").classList.add("on");
-		}
-
-		if (response == "tools" && document.getElementById("button_tools") != null) {
-			document.getElementById("toolbar_shelf_tools").classList.remove("hidden");
-			document.getElementById("button_tools").classList.add("on");
-		}
-
-		if (response == "groups" && document.getElementById("button_groups") != null) {
-			document.getElementById("toolbar_shelf_groups").classList.remove("hidden");
-			document.getElementById("button_groups").classList.add("on");
-		}
-
-		if (response == "backup" && document.getElementById("button_backup") != null) {
-			document.getElementById("toolbar_shelf_backup").classList.remove("hidden");
-			document.getElementById("button_backup").classList.add("on");
-		}
-
-		if (response == "folders" && document.getElementById("button_folders") != null) {
-			document.getElementById("toolbar_shelf_folders").classList.remove("hidden");
-			document.getElementById("button_folders").classList.add("on");
-		}
-		
-		if (browserId != "F") {
-			chrome.storage.local.get(null, function(storage) {
-				let bak1 = storage["windows_BAK1"] ? storage["windows_BAK1"] : [];
-				let bak2 = storage["windows_BAK2"] ? storage["windows_BAK2"] : [];
-				let bak3 = storage["windows_BAK3"] ? storage["windows_BAK3"] : [];
-
-				if (bak1.length && document.getElementById("#button_load_bak1") != null) {
-					document.getElementById("button_load_bak1").classList.remove("disabled");
-				} else {
-					document.getElementById("button_load_bak1").classList.add("disabled");
-				}
-				
-				if (bak2.length && document.getElementById("#button_load_bak2") != null) {
-					document.getElementById("button_load_bak2").classList.remove("disabled");
-				} else {
-					document.getElementById("button_load_bak2").classList.add("disabled");
-				}
-
-				if (bak3.length && document.getElementById("#button_load_bak3") != null) {
-					document.getElementById("button_load_bak3").classList.remove("disabled");
-				} else {
-					document.getElementById("button_load_bak3").classList.add("disabled");
-				}
-
-			});
-		}
-		
-		RefreshGUI();
-	});
+function Toolbar_RestoreToolbarSearchFilter() { // RESTORE LAST USED SEARCH TYPE (URL OR TITLE) IN TOOLBAR SEARCH
+    chrome.runtime.sendMessage({command: "get_search_filter", windowId: tt.CurrentWindowId}, function(response) {
+        if (response == "url") {
+            DOM_SetClasses(document.getElementById("button_filter_type"), ["url"], ["title"], []);
+        } else {
+            DOM_SetClasses(document.getElementById("button_filter_type"), ["title"], ["url"], []);
+        }
+    });
 }
 
-// FUNCTION TO TOGGLE SHELFS AND SAVE IT
-function ShelfToggle(mousebutton, button, toolbarId, SendMessage) {
-	if (mousebutton == 1) {
-		if (button.classList.contains("on")) {
-			document.querySelectorAll(".on").forEach(function(s){
-				s.classList.remove("on");
-			});
-			document.querySelectorAll(".toolbar_shelf").forEach(function(s){
-				s.classList.add("hidden");
-			});
-		} else {
-			document.querySelectorAll(".toolbar_shelf:not(#"+toolbarId+")").forEach(function(s){
-				s.classList.add("hidden");
-			});
-			document.getElementById(toolbarId).classList.remove("hidden");
-			chrome.runtime.sendMessage({command: "set_active_shelf", active_shelf: SendMessage, windowId: tt.CurrentWindowId});
-			document.querySelectorAll(".on:not(#"+button.id+")").forEach(function(s){
-				s.classList.remove("on");
-			});
-			button.classList.add("on");
-		}
-		RefreshGUI();
-	}
+function Toolbar_RestoreToolbarShelf() { // RESTORE LAST ACTIVE SHELF (SEARCH, TOOLS, GROUPS, SESSION OR FOLDER) IN TOOLBAR
+    chrome.runtime.sendMessage({command: "get_active_shelf", windowId: tt.CurrentWindowId}, function(response) {
+        let filterBox = document.getElementById("filter_box");
+        filterBox.setAttribute("placeholder", labels.searchbox);
+        filterBox.style.opacity = "1";
+        
+        let query = document.querySelectorAll(".on");
+        for (let s of query) {
+            s.classList.remove("on");
+        }
+        query = document.querySelectorAll(".toolbar_shelf");
+        for (let s of query) {
+            s.classList.add("hidden");
+        }
+        if (response == "search" && document.getElementById("button_search") != null) {
+            document.getElementById("toolbar_search").classList.remove("hidden");
+            document.getElementById("button_search").classList.add("on");
+        }
+        if (response == "tools" && document.getElementById("button_tools") != null) {
+            document.getElementById("toolbar_shelf_tools").classList.remove("hidden");
+            document.getElementById("button_tools").classList.add("on");
+        }
+        if (response == "groups" && document.getElementById("button_groups") != null) {
+            document.getElementById("toolbar_shelf_groups").classList.remove("hidden");
+            document.getElementById("button_groups").classList.add("on");
+        }
+        if (response == "backup" && document.getElementById("button_backup") != null) {
+            document.getElementById("toolbar_shelf_backup").classList.remove("hidden");
+            document.getElementById("button_backup").classList.add("on");
+        }
+        if (response == "folders" && document.getElementById("button_folders") != null) {
+            document.getElementById("toolbar_shelf_folders").classList.remove("hidden");
+            document.getElementById("button_folders").classList.add("on");
+        }
+        if (browserId != "F") {
+            chrome.storage.local.get(null, function(storage) {
+                let bak1 = storage["windows_BAK1"] ? storage["windows_BAK1"] : [];
+                let bak2 = storage["windows_BAK2"] ? storage["windows_BAK2"] : [];
+                let bak3 = storage["windows_BAK3"] ? storage["windows_BAK3"] : [];
+                if (bak1.length && document.getElementById("#button_load_bak1") != null) {
+                    document.getElementById("button_load_bak1").classList.remove("disabled");
+                } else {
+                    document.getElementById("button_load_bak1").classList.add("disabled");
+                }
+                if (bak2.length && document.getElementById("#button_load_bak2") != null) {
+                    document.getElementById("button_load_bak2").classList.remove("disabled");
+                } else {
+                    document.getElementById("button_load_bak2").classList.add("disabled");
+                }
+                if (bak3.length && document.getElementById("#button_load_bak3") != null) {
+                    document.getElementById("button_load_bak3").classList.remove("disabled");
+                } else {
+                    document.getElementById("button_load_bak3").classList.add("disabled");
+                }
+            });
+        }
+        DOM_RefreshGUI();
+    });
 }
 
-function RemoveToolbar() {
-	let toolbar = document.getElementById("toolbar");
-	while(toolbar.hasChildNodes()) {
-		toolbar.removeChild(toolbar.firstChild);
-	}
+function Toolbar_ShelfToggle(mousebutton, button, toolbarId, SendMessage, SidebarRefreshGUI, OptionsRefreshGUI) { // FUNCTION TO TOGGLE SHELFS AND SAVE IT
+    if (mousebutton == 1) {
+        if (button.classList.contains("on")) {
+            let query = document.querySelectorAll(".on");
+            for (let s of query) {
+                s.classList.remove("on");
+            }
+            query = document.querySelectorAll(".toolbar_shelf");
+            for (let s of query) {
+                s.classList.add("hidden");
+            }
+            chrome.runtime.sendMessage({command: "set_active_shelf", active_shelf: "", windowId: tt.CurrentWindowId});
+        } else {
+            let query = document.querySelectorAll(".toolbar_shelf:not(#" + toolbarId + ")");
+            for (let s of query) {
+                s.classList.add("hidden");
+            }
+            document.getElementById(toolbarId).classList.remove("hidden");
+            chrome.runtime.sendMessage({command: "set_active_shelf", active_shelf: SendMessage, windowId: tt.CurrentWindowId});
+            query = document.querySelectorAll(".on:not(#" + button.id + ")");
+            for (let s of query) {
+                s.classList.remove("on");
+            }
+            button.classList.add("on");
+        }
+        if (SidebarRefreshGUI) DOM_RefreshGUI();
+        if (OptionsRefreshGUI) RefreshGUI();
+    }
 }
 
-function RecreateToolbar(NewToolbar) {
-	let toolbar = document.getElementById("toolbar");
-	
-	for (var shelf in NewToolbar) {
-		let NewShelf = document.createElement("div");
-		NewShelf.id = shelf;
-		NewShelf.classList = "toolbar_shelf";
-		toolbar.appendChild(NewShelf);
-		
-		NewToolbar[shelf].forEach(function(button){
-			let Newbutton = document.createElement("div");
-			Newbutton.id = button;
-			Newbutton.classList = "button";
-			
-			NewShelf.appendChild(Newbutton);
-			
-			let NewbuttonIMG = document.createElement("div");
-			NewbuttonIMG.classList = "button_img";
-			Newbutton.appendChild(NewbuttonIMG);
-			
-		});
-		
-	}
-	
-	let toolbar_main = document.getElementById("toolbar_main");
-	let SearchShelf = document.getElementById("toolbar_search");
-
-	if (toolbar_main != null && SearchShelf != null) {
-		toolbar_main.classList.remove("toolbar_shelf");
-		
-		let SearchBox = document.createElement("div");
-		SearchBox.id = "toolbar_search_input_box";
-		SearchShelf.appendChild(SearchBox);
-		
-		let SearchInput = document.createElement("input");
-		SearchInput.classList = "text_input";
-		SearchInput.id = "filter_box";
-		SearchInput.type = "text";
-		SearchInput.placeholder = labels.searchbox;
-		SearchBox.appendChild(SearchInput);
-		
-		let ClearX = document.createElement("div");
-		ClearX.id = "button_filter_clear";
-		ClearX.type = "reset";
-		ClearX.style.opacity = "0";
-		ClearX.style.position = "absolute";
-		SearchBox.appendChild(ClearX);
-		
-		let SearchButtons = document.createElement("div");
-		SearchButtons.id = "toolbar_search_buttons";
-		SearchShelf.appendChild(SearchButtons);
-
-		let FilterType = document.getElementById("button_filter_type");
-		SearchButtons.appendChild(FilterType);
-		
-		let GoPrev = document.getElementById("filter_search_go_prev");
-		SearchButtons.appendChild(GoPrev);
-		
-		let GoNext = document.getElementById("filter_search_go_next");
-		SearchButtons.appendChild(GoNext);
-
-		Loadi18n();
-	}
-
+function Toolbar_RemoveToolbar() {
+    let toolbar = document.getElementById("toolbar");
+    while (toolbar.hasChildNodes()) {
+        toolbar.removeChild(toolbar.firstChild);
+    }
 }
 
-function RecreateToolbarUnusedButtons(buttonsIds) {
-	let unused_buttons = document.getElementById("toolbar_unused_buttons");
-
-	buttonsIds.forEach(function(button){
-		let Newbutton = document.createElement("div");
-		Newbutton.id = button;
-		Newbutton.classList = "button";
-		unused_buttons.appendChild(Newbutton);
-		let NewbuttonIMG = document.createElement("div");
-		NewbuttonIMG.classList = "button_img";
-		Newbutton.appendChild(NewbuttonIMG);
-		
-	});
+function Toolbar_RecreateToolbar(NewToolbar) {
+    let toolbar = document.getElementById("toolbar");
+    for (var shelf in NewToolbar) {
+        let NewShelf = DOM_New("div", toolbar, {id: shelf, className: "toolbar_shelf"});
+        for (let button of NewToolbar[shelf]) {
+            let Newbutton = DOM_New("div", NewShelf, {id: button, className: "button"});
+            DOM_New("div", Newbutton, {className: "button_img"});
+        }
+    }
+    let toolbar_main = document.getElementById("toolbar_main");
+    let SearchShelf = document.getElementById("toolbar_search");
+    if (toolbar_main != null && SearchShelf != null) {
+        toolbar_main.classList.remove("toolbar_shelf");
+        let SearchBox = DOM_New("div", SearchShelf, {id: "toolbar_search_input_box"});
+        DOM_New("input", SearchBox, {id: "filter_box", className: "text_input", type: "text", placeholder: labels.searchbox});
+        DOM_New("div", SearchBox, {id: "button_filter_clear", type: "reset"}, {opacity: "0", position: "absolute"});
+        let SearchButtons = DOM_New("div", SearchShelf, {id: "toolbar_search_buttons"});
+        DOM_AppendToNode(document.getElementById("button_filter_type"), SearchButtons);
+        DOM_AppendToNode(document.getElementById("filter_search_go_prev"), SearchButtons);
+        DOM_AppendToNode(document.getElementById("filter_search_go_next"), SearchButtons);
+        DOM_Loadi18n();
+    }
 }
 
-
-
-function SaveToolbar() {
-	let unused_buttons = [];
-	let toolbar = {};
-	
-	let u = document.querySelectorAll("#toolbar_unused_buttons .button");
-	u.forEach(function(b){
-		unused_buttons.push(b.id);
-	});
-
-	let t = document.getElementById("toolbar");
-	t.childNodes.forEach(function(s){
-		toolbar[s.id] = [];
-		let t = document.querySelectorAll("#"+s.id+" .button").forEach(function(b){
-			toolbar[s.id].push(b.id);
-		});
-	});
-
-	chrome.storage.local.set({toolbar: toolbar});
-	chrome.storage.local.set({unused_buttons: unused_buttons});
-	setTimeout(function() {
-		chrome.runtime.sendMessage({command: "reload_toolbar", toolbar: toolbar, opt: opt});
-	}, 50);
+function Toolbar_RecreateToolbarUnusedButtons(buttonsIds) { // OPTIONS PAGE
+    let unused_buttons = document.getElementById("toolbar_unused_buttons");
+    for (let button of buttonsIds) {
+        let Newbutton = DOM_New("div", unused_buttons, {id: button, className: "button"});
+        DOM_New("div", Newbutton, {className: "button_img"});
+    }
 }
 
+function Toolbar_SaveToolbar() { // OPTIONS PAGE
+    let unused_buttons = [];
+    let toolbar = {};
+    let unused_buttons_div = document.querySelectorAll("#toolbar_unused_buttons .button");
+    for (let b of unused_buttons_div) {
+        unused_buttons.push(b.id);
+    }
+    let toolbar_div = document.getElementById("toolbar");
+    for (let toolbar_shelf of toolbar_div.childNodes) {
+        toolbar[toolbar_shelf.id] = [];
+        let query = document.querySelectorAll("#" + toolbar_shelf.id + " .button");
+        for (let button of query) {
+            toolbar[toolbar_shelf.id].push(button.id);
+        }
+    }
+    chrome.storage.local.set({toolbar: toolbar});
+    chrome.storage.local.set({unused_buttons: unused_buttons});
+    setTimeout(function() {chrome.runtime.sendMessage({command: "reload_toolbar", toolbar: toolbar, opt: opt});}, 50);
+}
 
-// ASSIGN MOUSE EVENTS FOR TOOLBAR BUTTONS, (Buttons AND ToolbarShelfToggle), PARAMETERS DECIDE IF BUTTONS ARE CLICKABLE
+// ASSIGN MOUSE EVENTS FOR TOOLBAR BUTTONS, (Buttons AND BindToolbarShelfToggleButtons), PARAMETERS DECIDE IF BUTTONS ARE CLICKABLE
 // IN OPTIONS PAGE - TOOLBAR BUTTONS SAMPLES, MUST NOT CALL FUNCTIONS ON CLICKS, BUT STILL SHELFS BUTTONS MUST TOGGLE AND MOREOVER ON CLICK AND NOT ON MOUSEDOWN THIS IS WHERE ToolbarShelfToggleClickType="Click" IS NECESSARY
-function SetToolbarEvents(CleanPreviousBindings, Buttons, ToolbarShelfToggle, ToolbarShelfToggleClickType) {
+function Toolbar_SetToolbarEvents(CleanPreviousBindings, BindButtons, BindToolbarShelfToggleButtons, ToolbarShelfToggleClickType, SidebarRefreshGUI, OptionsRefreshGUI) {
 
-	let ClearSearch = document.getElementById("button_filter_clear");
-	let FilterBox = document.getElementById("filter_box");
-	
-	if (ClearSearch != null && FilterBox != null) {
-		if (CleanPreviousBindings) {
-			FilterBox.removeEventListener("oninput", function(){});
-			ClearSearch.removeEventListener("onmousedown", function(){});
-		}	
-		if (Buttons) {
-			// FILTER ON INPUT
-			FilterBox.oninput = function(event) {
-				FindTab(this.value);
-			}
-			// CLEAR FILTER BUTTON
-			ClearSearch.onmousedown = function(event) {
-				if (event.which == 1) {
-					this.style.opacity = "0";
-					this.style.opacity = "0";
-					this.setAttribute("title", "");
-					FindTab("");
-				}
-			}
-		}
-	}
+    let ClearSearch = document.getElementById("button_filter_clear");
+    let FilterBox = document.getElementById("filter_box");
 
-	document.querySelectorAll(".button").forEach(function(s){
-		
-		if (CleanPreviousBindings) {
-			s.removeEventListener("onmousedown", function(){});
-			s.removeEventListener("onclick", function(){});
-			s.removeEventListener("click", function(){});
-		}	
-			
-		if (ToolbarShelfToggle) {
-			if (s.id == "button_search") {
-				s.addEventListener(ToolbarShelfToggleClickType, function(event) {
-					if (event.which == 1) {
-						ShelfToggle(event.which, this, "toolbar_search", "search");
-					}
-				});
-			}
-			if (s.id == "button_tools") {
-				s.addEventListener(ToolbarShelfToggleClickType, function(event) {
-					if (event.which == 1) {
-						ShelfToggle(event.which, this, "toolbar_shelf_tools", "tools");
-					}
-				});
-			}
-			if (s.id == "button_groups") {
-				s.addEventListener(ToolbarShelfToggleClickType, function(event) {
-					if (event.which == 1) {
-						ShelfToggle(event.which, this, "toolbar_shelf_groups", "groups");
-					}
-				});
-			}
-			if (s.id == "button_backup") {
-				s.addEventListener(ToolbarShelfToggleClickType, function(event) {
-					if (event.which == 1) {
-						ShelfToggle(event.which, this, "toolbar_shelf_backup", "backup");
-					}
-				});
-			}
-			if (s.id == "button_folders") {
-				s.addEventListener(ToolbarShelfToggleClickType, function(event) {
-					if (event.which == 1) {
-						ShelfToggle(event.which, this, "toolbar_shelf_folders", "folders");
-					}
-				});
-			}
-		}
-		
-		if (Buttons) {
-			// NEW TAB
-			if (s.id == "button_new") {
-				s.onclick = function(event) {
-					if (event.which == 1) {
-						if (opt.append_tab_from_toolbar == "group_root") {
-							OpenNewTab(false, tt.active_group);
-						}
-						if (opt.append_tab_from_toolbar == "as_regular_orphan") {
-							OpenNewTab(false, (document.querySelectorAll("#"+tt.active_group+" .tab").length == 0 ? tt.active_group : undefined));
-						}
-					}
-				}
-				s.onmousedown = function(event) {
-					// DUPLICATE TAB
-					if (event.which == 2) {
-						event.preventDefault();
-						let activeTab = document.querySelector("#"+tt.active_group+" .active_tab") != null ? document.querySelector("#"+tt.active_group+" .active_tab") : document.querySelector(".pin.active_tab") != null ? document.querySelector(".pin.active_tab") : null;
-						if (activeTab != null) {
-							DuplicateTab(activeTab);
-						}
-					}
-					// SCROLL TO TAB
-					if (event.which == 3) {
-						chrome.tabs.query({currentWindow: true, active: true}, function(activeTab) {
-							if (activeTab[0].pinned && opt.pin_list_multi_row == false) {
-								ScrollToTab(activeTab[0].id);
-							}
-							if (activeTab[0].pinned == false) {
-								let Tab = document.getElementById(activeTab[0].id);
-								let groupId = GetParentsByClass(Tab, "group")[0].id;
-								SetActiveGroup(groupId, true, true);
-							}
-						});
-					}
-				}
-			}
-			// PIN TAB
-			if (s.id == "button_pin") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						let Tabs = document.querySelectorAll(".pin.active_tab, .pin.selected_tab, #"+tt.active_group+" .active_tab, #"+tt.active_group+" .selected_tab");
-						Tabs.forEach(function(s){
-							chrome.tabs.update(parseInt(s.id), { pinned: Tabs[0].classList.contains("tab") });
-						})
-					}
-				}				
-			}
-			// VERTICAL TABS OPTIONS
-			if (s.id == "button_options") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						chrome.tabs.create({url: "options.html"});
-					}
-				}
-			}
+    if (ClearSearch != null && FilterBox != null) {
+        if (CleanPreviousBindings) {
+            FilterBox.removeEventListener("oninput", function() {});
+            ClearSearch.removeEventListener("onmousedown", function() {});
+        }
+        if (BindButtons) {
+            // FILTER ON INPUT
+            FilterBox.oninput = function(event) {
+                Tabs_FindTab(this.value);
+            }
+            // CLEAR FILTER BUTTON
+            ClearSearch.onmousedown = function(event) {
+                if (event.which == 1) {
+                    this.style.opacity = "0";
+                    this.setAttribute("title", "");
+                    Tabs_FindTab("");
+                }
+            }
+        }
+    }
 
-			// UNDO CLOSE
-			if (s.id == "button_undo") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						chrome.sessions.getRecentlyClosed( null, function(sessions) {
-							if (sessions.length > 0) {
-								chrome.sessions.restore(null, function(restored) {});
-							}
-						});
-					}
-				}
-			}
-
-			// MOVE TAB TO NEW WINDOW (DETACH)
-			if (s.id == "button_detach" || s.id == "button_move") { // move is legacy name of detach button
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						if (document.querySelectorAll("#"+tt.active_group+" .selected_folder").length > 0){
-							let detach = GetSelectedFolders();
-							Detach(detach.TabsIds, detach.Folders);
-						} else {
-							let tabsArr = [];
-							document.querySelectorAll(".pin.selected_tab, .pin.active_tab, #"+tt.active_group+" .selected_tab, #"+tt.active_group+" .active_tab").forEach(function(s){
-								tabsArr.push(parseInt(s.id));
-								if (s.childNodes[1].childNodes.length > 0) {
-									document.querySelectorAll("#"+s.childNodes[1].id+" .tab").forEach(function(t){
-										tabsArr.push(parseInt(t.id));
-									});
-								}
-							});
-							Detach(tabsArr);
-						}
-					}
-				}
-			}
-
-			// GO TO PREVIOUS SEARCH RESULT
-			if (s.id == "filter_search_go_prev") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						let filtered = document.querySelectorAll("#"+tt.active_group+" .tab.filtered");
-						if (filtered.length > 0) {
-							document.querySelectorAll(".highlighted_search").forEach(function(s){
-								s.classList.remove("highlighted_search");
-							});
-							if (tt.SearchIndex == 0) {
-								tt.SearchIndex = filtered.length-1;
-							} else {
-								tt.SearchIndex--;
-							}
-							filtered[tt.SearchIndex].classList.add("highlighted_search");
-							ScrollToTab(filtered[tt.SearchIndex].id);
-						}
-					}
-				}
-			}
-	
-			// GO TO NEXT SEARCH RESULT
-			if (s.id == "filter_search_go_next") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						let filtered = document.querySelectorAll("#"+tt.active_group+" .tab.filtered");
-						if (filtered.length > 0) {
-							document.querySelectorAll(".highlighted_search").forEach(function(s){
-								s.classList.remove("highlighted_search");
-							});
-							if (tt.SearchIndex == filtered.length-1) {
-								tt.SearchIndex = 0;
-							} else {
-								tt.SearchIndex++;
-							}
-							filtered[tt.SearchIndex].classList.add("highlighted_search");
-							ScrollToTab(filtered[tt.SearchIndex].id);
-						}
-					}
-				}
-			}
-
-			// SHOW/HIDE GROUPS TOOLBAR
-			if (s.id == "button_groups_toolbar_hide") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						GroupsToolbarToggle();
-					}
-				}
-			}
-
-			// SHOW GROUP MANAGER
-			if (s.id == "button_manager_window") {
-				s.onmousedown = function(event) {
-					if (event.which == 1 && document.getElementById("manager_window").style.top == "-500px") {
-						OpenManagerWindow();
-					} else {
-						HideRenameDialogs();
-					}
-				}
-			}
-			// NEW GROUP
-			if (s.id == "button_new_group") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						AddNewGroup();
-					}
-				}
-			}
-
-			// REMOVE GROUP
-			if (s.id == "button_remove_group") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						if (tt.active_group != "tab_list") {
-							GroupRemove(tt.active_group, event.shiftKey);
-						}
-					}
-				}
-			}
-
-			
-			
-			// EDIT GROUP
-			if (s.id == "button_edit_group") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						if (tt.active_group != "tab_list") {
-							ShowGroupEditWindow(tt.active_group);
-						}
-					}
-				}
-			}
-			
-			// EXPORT GROUP
-			if (s.id == "button_export_group") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						ExportGroup(tt.active_group, tt.groups[tt.active_group].name, false);
-					}
-				}
-			}
-			
-			// IMPORT GROUP
-			if (s.id == "button_import_group") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						let inputFile = ShowOpenFileDialog(".tt_group");
-						inputFile.onchange = function(event) {
-							ImportGroup(true, false);
-						}
-					}
-				}
-			}
-
-			// NEW FOLDER
-			if (s.id == "button_new_folder") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						let FolderId = AddNewFolder({SetEvents: true});
-						ShowRenameFolderDialog(FolderId);
-					}
-				}
-			}
-			
-			// RENAME FOLDER
-			if (s.id == "button_edit_folder") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						if (document.querySelectorAll("#"+tt.active_group+" .selected_folder").length > 0) {
-							ShowRenameFolderDialog(document.querySelectorAll("#"+tt.active_group+" .selected_folder")[0].id);
-						}
-					}
-				}
-			}
-			// REMOVE FOLDERS
-			if (s.id == "button_remove_folder") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						document.querySelectorAll("#"+tt.active_group+" .selected_folder").forEach(function(s){
-							RemoveFolder(s.id);
-						});
-					}
-				}
-			}
-			// DISCARD TABS
-			if (s.id == "button_unload" || s.id == "button_discard") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						if (document.querySelectorAll(".pin.selected_tab:not(.active_tab), #"+tt.active_group+" .selected_tab:not(.active_tab)").length > 0) {
-							DiscardTabs(
-								Array.prototype.map.call(document.querySelectorAll(".pin:not(.active_tab), #"+tt.active_group+" .selected_tab:not(.active_tab)"), function(s){
-									return parseInt(s.id);
-								})
-							);
-						} else {
-							DiscardTabs(
-								Array.prototype.map.call(document.querySelectorAll(".pin:not(.active_tab), .tab:not(.active_tab)"), function(s){
-									return parseInt(s.id);
-								})
-							);
-						}
-					}
-				}
-			}
-			// IMPORT BACKUP
-			if (s.id == "button_import_bak") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						let inputFile = ShowOpenFileDialog(".tt_session");
-						inputFile.onchange = function(event) {
-							ImportSession(true, false, false);
-						}
-					}
-				}
-			}
-			// EXPORT BACKUP
-			if (s.id == "button_export_bak") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						let d = new Date();
-						ExportSession((d.toLocaleString().replace("/", ".").replace("/", ".").replace(":", "꞉").replace(":", "꞉")), true, false, false);
-					}
-				}
-			}
-			// MERGE BACKUP
-			if (s.id == "button_import_merge_bak") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						let inputFile = ShowOpenFileDialog(".tt_session");
-						inputFile.onchange = function(event) {
-							ImportSession(false, false, true);
-							// ImportMergeTabs();
-						}						
-					}
-				}
-			}
-
-			// CHANGE FILTERING TYPE
-			if (s.id == "button_filter_type") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						if (this.classList.contains("url")) {
-							this.classList.remove("url");
-							this.classList.add("title");
-							chrome.runtime.sendMessage({command: "set_search_filter", search_filter: "title", windowId: tt.CurrentWindowId});
-						} else {
-							this.classList.remove("title");
-							this.classList.add("url");
-							chrome.runtime.sendMessage({command: "set_search_filter", search_filter: "url", windowId: tt.CurrentWindowId});
-						}
-						FindTab(document.getElementById("filter_box").value);
-					}
-				}
-			}
-
-			// EMERGENCY RELOAD
-			if (s.id == "button_reboot") {
-				s.onmousedown = function(event) {
-					if (event.which == 1) {
-						chrome.runtime.sendMessage({command: "reload"});
-						chrome.runtime.sendMessage({command: "reload_sidebar"});
-						location.reload();
-					}
-				}
-			}
-			
-			// SORT TABS
-			// if (s.id == "button_sort") {
-				// s.onmousedown = function(event) {
-					// if (event.which == 1) {
-						// SortTabs();
-					// }
-				// }
-			// }
-			// REPEAT SEARCH
-			// if (s.id == "repeat_search") {
-				// s.onmousedown = function(event) {
-					// if (event.which == 1) {
-						// FindTab(document.getElementById("filter_box").value);
-					// }
-				// }
-			// }
-
-			
-			if (browserId != "F") {
-				// BOOKMARKS
-				if (s.id == "button_bookmarks") {
-					s.onmousedown = function(event) {
-						if (event.which == 1) {
-							chrome.tabs.create({url: "chrome://bookmarks/"});
-						}
-					}
-				}
-				
-				// DOWNLOADS
-				if (s.id == "button_downloads") {
-					s.onmousedown = function(event) {
-						if (event.which == 1) {
-							chrome.tabs.create({url: "chrome://downloads/"});
-						}
-					}
-				}
-				
-				// HISTORY
-				if (s.id == "button_history") {
-					s.onmousedown = function(event) {
-						if (event.which == 1) {
-							chrome.tabs.create({url: "chrome://history/"});
-						}
-					}
-				}
-				
-				// EXTENSIONS
-				if (s.id == "button_extensions") {
-					s.onmousedown = function(event) {
-						if (event.which == 1) {
-							chrome.tabs.create({url: "chrome://extensions"});
-						}
-					}
-				}
-				
-				// SETTINGS
-				if (s.id == "button_settings") {
-					s.onmousedown = function(event) {
-						if (event.which == 1) {
-							chrome.tabs.create({url: "chrome://settings/"});
-						}
-					}
-				}
-				
-				// LOAD BACKUPS
-				if (s.id == "button_load_bak1" || s.id == "button_load_bak2" || s.id == "button_load_bak3") {
-					s.onmousedown = function(event) {
-						if (event.which == 1 && this.classList.contains("disabled") == false) {
-							let BakN = (this.id).substr(15);
-							chrome.storage.local.get(null, function(storage) {
-								if (Object.keys(storage["windows_BAK"+BakN]).length > 0) { chrome.storage.local.set({"windows": storage["windows_BAK"+BakN]}); }
-								if (Object.keys(storage["tabs_BAK"+BakN]).length > 0) { chrome.storage.local.set({"tabs": storage["tabs_BAK"+BakN]}); alert("Loaded backup"); }
-								chrome.runtime.sendMessage({command: "reload"}); chrome.runtime.sendMessage({command: "reload_sidebar"}); location.reload();
-							});
-						}
-					}
-				}
-			}
-		}
-
-	});
-
+    let query = document.querySelectorAll(".button");
+    for (let s of query) {
+        if (CleanPreviousBindings) {
+            s.removeEventListener("onmousedown", function() {});
+            s.removeEventListener("onclick", function() {});
+            s.removeEventListener("click", function() {});
+        }
+        if (BindToolbarShelfToggleButtons) {
+            if (s.id == "button_search") {
+                s.addEventListener(ToolbarShelfToggleClickType, function(event) {
+                    if (event.which == 1) Toolbar_ShelfToggle(event.which, this, "toolbar_search", "search", SidebarRefreshGUI, OptionsRefreshGUI);
+                });
+            }
+            if (s.id == "button_tools") {
+                s.addEventListener(ToolbarShelfToggleClickType, function(event) {
+                    if (event.which == 1) Toolbar_ShelfToggle(event.which, this, "toolbar_shelf_tools", "tools", SidebarRefreshGUI, OptionsRefreshGUI);
+                });
+            }
+            if (s.id == "button_groups") {
+                s.addEventListener(ToolbarShelfToggleClickType, function(event) {
+                    if (event.which == 1) Toolbar_ShelfToggle(event.which, this, "toolbar_shelf_groups", "groups", SidebarRefreshGUI, OptionsRefreshGUI);
+                });
+            }
+            if (s.id == "button_backup") {
+                s.addEventListener(ToolbarShelfToggleClickType, function(event) {
+                    if (event.which == 1) Toolbar_ShelfToggle(event.which, this, "toolbar_shelf_backup", "backup", SidebarRefreshGUI, OptionsRefreshGUI);
+                });
+            }
+            if (s.id == "button_folders") {
+                s.addEventListener(ToolbarShelfToggleClickType, function(event) {
+                    if (event.which == 1) Toolbar_ShelfToggle(event.which, this, "toolbar_shelf_folders", "folders", SidebarRefreshGUI, OptionsRefreshGUI);
+                });
+            }
+        }
+        if (BindButtons) {
+            if (s.id == "button_new") { // NEW TAB
+                s.onclick = function(event) {
+                    if (event.which == 1) {
+                        if (opt.append_tab_from_toolbar == "group_root") Tabs_OpenNewTab(false, undefined, document.getElementById("°"+tt.active_group));
+                        if (opt.append_tab_from_toolbar == "as_regular_orphan") Tabs_OpenNewTab(false, undefined, undefined);
+                    }
+                }
+                s.onmousedown = function(event) {
+                    if (event.which == 2) { // DUPLICATE TAB
+                        event.preventDefault();
+                        let activeTab = document.querySelector("#" + tt.active_group + " .active_tab") != null ? document.querySelector("#" + tt.active_group + " .active_tab") : document.querySelector(".pin.active_tab") != null ? document.querySelector(".pin.active_tab") : null;
+                        if (activeTab != null && tt.tabs[activeTab.id]) tt.tabs[activeTab.id].DuplicateTab();
+                    }
+                    if (event.which == 3) { // SCROLL TO TAB
+                        chrome.tabs.query({currentWindow: true, active: true}, function(activeTab) {
+                            if (activeTab[0].pinned && opt.pin_list_multi_row == false && tt.tabs[activeTab[0].id]) tt.tabs[activeTab[0].id].ScrollToTab();
+                            if (activeTab[0].pinned == false) {
+                                let Tab = document.getElementById(activeTab[0].id);
+                                let groupId = DOM_GetParentsByClass(Tab, "group")[0].id;
+                                Groups_SetActiveGroup(groupId, true, true);
+                            }
+                        });
+                    }
+                }
+            }
+            if (s.id == "button_pin") { // PIN TAB
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let Tabs = document.querySelectorAll(".pin.active_tab, .pin.selected, #" + tt.active_group + " .active_tab, #" + tt.active_group + " .selected");
+                        for (let s of Tabs) {
+                            chrome.tabs.update(parseInt(s.id), {pinned: Tabs[0].classList.contains("tab")});
+                        }
+                    }
+                }
+            }
+            if (s.id == "button_options") { // VERTICAL TABS OPTIONS
+                s.onmousedown = function(event) {
+                    if (event.which == 1) chrome.tabs.create({url: "options/options.html"});
+                }
+            }
+            if (s.id == "button_undo") { // UNDO CLOSE
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        chrome.sessions.getRecentlyClosed(null, function(sessions) {
+                            if (sessions.length > 0) chrome.sessions.restore(null, function(restored) {});
+                        });
+                    }
+                }
+            }
+            if (s.id == "button_detach" || s.id == "button_move") { // MOVE TAB TO NEW WINDOW (DETACH), move is legacy name of detach button
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        DOM_FreezeSelection(false);
+                        let Nodes = [];
+                        let NodesTypes = {DraggingPin: false, DraggingTab: false, DraggingFolder: false};
+                        let query = [];
+                        if (document.querySelectorAll(".selected").length > 0) {
+                           query = document.querySelectorAll(".selected, .selected .tab, .selected .folder");
+                        } else {
+                            query = document.querySelectorAll(".active_tab");
+                        }
+                        for (let s of query) {
+                            if (s.classList.contains("pin")) {
+                                NodesTypes.DraggingPin = true;
+                                Nodes.push({id: s.id, parent: s.parentNode.id, selected: s.classList.contains("selected"), temporary: s.classList.contains("selected_temporarly"), NodeClass: "pin"});
+                            }
+                            if (s.classList.contains("tab")) {
+                                NodesTypes.DraggingTab = true;
+                                Nodes.push({id: s.id, parent: s.parentNode.id, selected: s.classList.contains("selected"), temporary: s.classList.contains("selected_temporarly"), NodeClass: "tab"});
+                            }
+                            if (s.classList.contains("folder")) {
+                                NodesTypes.DraggingFolder = true;
+                                Nodes.push({id: s.id, parent: s.parentNode.id, selected: s.classList.contains("selected"), temporary: s.classList.contains("selected_temporarly"), NodeClass: "folder", index: (tt.folders[s.id] ? tt.folders[s.id].index : 0), name: (tt.folders[s.id] ? tt.folders[s.id].name : labels.noname_group), expand: (tt.folders[s.id] ? tt.folders[s.id].expand : "")});
+                            }
+                        }
+                        Tabs_Detach(Nodes, NodesTypes, {});
+                    }
+                }
+            }
+            if (s.id == "filter_search_go_prev") { // GO TO PREVIOUS SEARCH RESULT
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let filtered = document.querySelectorAll("#" + tt.active_group + " .tab.filtered");
+                        if (filtered.length > 0) {
+                            
+                            let query = document.querySelectorAll(".highlighted_search");
+                            for (let s of query) {
+                                s.classList.remove("highlighted_search");
+                            }
+                            if (tt.SearchIndex == 0) {
+                                tt.SearchIndex = filtered.length - 1;
+                            } else {
+                                tt.SearchIndex--;
+                            }
+                            filtered[tt.SearchIndex].classList.add("highlighted_search");
+                            if (tt.tabs[filtered[tt.SearchIndex].id]) tt.tabs[filtered[tt.SearchIndex].id].ScrollToTab();
+                        }
+                    }
+                }
+            }
+            if (s.id == "filter_search_go_next") { // GO TO NEXT SEARCH RESULT
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let filtered = document.querySelectorAll("#" + tt.active_group + " .tab.filtered");
+                        if (filtered.length > 0) {
+                            
+                            let query = document.querySelectorAll(".highlighted_search");
+                            for (let s of query) {
+                                s.classList.remove("highlighted_search");
+                            }
+                            if (tt.SearchIndex == filtered.length - 1) {
+                                tt.SearchIndex = 0;
+                            } else {
+                                tt.SearchIndex++;
+                            }
+                            filtered[tt.SearchIndex].classList.add("highlighted_search");
+                            if (tt.tabs[filtered[tt.SearchIndex].id]) tt.tabs[filtered[tt.SearchIndex].id].ScrollToTab();
+                        }
+                    }
+                }
+            }
+            if (s.id == "button_groups_toolbar_hide") {  // SHOW/HIDE GROUPS TOOLBAR
+                s.onmousedown = function(event) {
+                    if (event.which == 1) Groups_GroupsToolbarToggle();
+                }
+            }
+            if (s.id == "button_manager_window") { // SHOW GROUP MANAGER
+                s.onmousedown = function(event) {
+                    if (event.which == 1 && document.getElementById("manager_window").style.top == "-500px") {
+                        Manager_OpenManagerWindow();
+                    } else {
+                        DOM_HideRenameDialogs();
+                    }
+                }
+            }
+            if (s.id == "button_new_group") { // NEW GROUP
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let NewGroupId = Groups_AddNewGroup();
+                        Groups_ShowGroupEditWindow(NewGroupId);
+                    }
+                }
+            }
+            if (s.id == "button_remove_group") { // REMOVE GROUP
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        if (tt.active_group != "tab_list") Groups_GroupRemove(tt.active_group, event.shiftKey);
+                    }
+                }
+            }
+            if (s.id == "button_edit_group") { // EDIT GROUP
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        if (tt.active_group != "tab_list") Groups_ShowGroupEditWindow(tt.active_group);
+                    }
+                }
+            }
+            if (s.id == "button_export_group") { // EXPORT GROUP
+                s.onmousedown = function(event) {
+                    if (event.which == 1) Manager_ExportGroup(tt.active_group, tt.groups[tt.active_group].name, false);
+                }
+            }
+            if (s.id == "button_import_group") { // IMPORT GROUP
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let inputFile = File_ShowOpenFileDialog(".tt_group");
+                        inputFile.onchange = function(event) {
+                            Manager_ImportGroup(true, false);
+                        }
+                    }
+                }
+            }
+            if (s.id == "button_new_folder") { // NEW FOLDER
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let FolderId = Folders_AddNewFolder({});
+                        Folders_ShowRenameFolderDialog(FolderId);
+                    }
+                }
+            }
+            if (s.id == "button_edit_folder") { // RENAME FOLDER
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        if (document.querySelectorAll("#" + tt.active_group + " .selected").length > 0) Folders_ShowRenameFolderDialog(document.querySelectorAll("#" + tt.active_group + " .selected")[0].id);
+                    }
+                }
+            }
+            if (s.id == "button_remove_folder") { // REMOVE FOLDERS
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        
+                        let query = document.querySelectorAll("#" + tt.active_group + " .selected");
+                        for (let s of query) {
+                            Folders_RemoveFolder(s.id);
+                        }
+                    }
+                }
+            }
+            if (s.id == "button_unload" || s.id == "button_discard") { // DISCARD TABS
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        if (document.querySelectorAll(".pin.selected:not(.active_tab), #" + tt.active_group + " .selected:not(.active_tab)").length > 0) {
+                            Tabs_DiscardTabs(
+                                Array.prototype.map.call(document.querySelectorAll(".pin:not(.active_tab), #" + tt.active_group + " .selected:not(.active_tab)"), function(s) {
+                                    return parseInt(s.id);
+                                })
+                            );
+                        } else {
+                            Tabs_DiscardTabs(
+                                Array.prototype.map.call(document.querySelectorAll(".pin:not(.active_tab), .tab:not(.active_tab)"), function(s) {
+                                    return parseInt(s.id);
+                                })
+                            );
+                        }
+                    }
+                }
+            }
+            if (s.id == "button_import_bak") { // IMPORT BACKUP
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let inputFile = File_ShowOpenFileDialog(".tt_session");
+                        inputFile.onchange = function(event) {
+                            Manager_ImportSession(true, false, false);
+                        }
+                    }
+                }
+            }
+            if (s.id == "button_export_bak") { // EXPORT BACKUP
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let d = new Date();
+                        Manager_ExportSession((d.toLocaleString().replace(/\//g, ".").replace(/:/g, "꞉")), true, false, false);
+                    }
+                }
+            }
+            if (s.id == "button_import_merge_bak") { // MERGE BACKUP
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        let inputFile = File_ShowOpenFileDialog(".tt_session");
+                        inputFile.onchange = function(event) {
+                            Manager_ImportSession(false, false, true);
+                            // Manager_ImportMergeTabs();
+                        }
+                    }
+                }
+            }
+            if (s.id == "button_filter_type") { // CHANGE FILTERING TYPE
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        if (this.classList.contains("url")) {
+                            DOM_SetClasses(this, ["title"], ["url"], []);
+                            chrome.runtime.sendMessage({command: "set_search_filter", search_filter: "title", windowId: tt.CurrentWindowId});
+                        } else {
+                            DOM_SetClasses(this, ["url"], ["title"], []);
+                            chrome.runtime.sendMessage({command: "set_search_filter", search_filter: "url", windowId: tt.CurrentWindowId});
+                        }
+                        Tabs_FindTab(document.getElementById("filter_box").value);
+                    }
+                }
+            }
+            if (s.id == "button_reboot") { // EMERGENCY RELOAD
+                s.onmousedown = function(event) {
+                    if (event.which == 1) {
+                        chrome.runtime.sendMessage({command: "reload"});
+                        chrome.runtime.sendMessage({command: "reload_sidebar"});
+                        location.reload();
+                    }
+                }
+            }
+            if (browserId != "F") {
+                if (s.id == "button_bookmarks") { // BOOKMARKS
+                    s.onmousedown = function(event) {
+                        if (event.which == 1) chrome.tabs.create({url: "chrome://bookmarks/"});
+                    }
+                }
+                if (s.id == "button_downloads") { // DOWNLOADS
+                    s.onmousedown = function(event) {
+                        if (event.which == 1) chrome.tabs.create({url: "chrome://downloads/"});
+                    }
+                }
+                if (s.id == "button_history") { // HISTORY
+                    s.onmousedown = function(event) {
+                        if (event.which == 1) chrome.tabs.create({url: "chrome://history/"});
+                    }
+                }
+                if (s.id == "button_extensions") { // EXTENSIONS
+                    s.onmousedown = function(event) {
+                        if (event.which == 1) chrome.tabs.create({url: "chrome://extensions"});
+                    }
+                }
+                if (s.id == "button_settings") { // SETTINGS
+                    s.onmousedown = function(event) {
+                        if (event.which == 1) chrome.tabs.create({url: "chrome://settings/"});
+                    }
+                }
+                if (s.id == "button_load_bak1" || s.id == "button_load_bak2" || s.id == "button_load_bak3") { // LOAD BACKUPS
+                    s.onmousedown = function(event) {
+                        if (event.which == 1 && this.classList.contains("disabled") == false) {
+                            let BakN = (this.id).substr(15);
+                            chrome.storage.local.get(null, function(storage) {
+                                if (Object.keys(storage["windows_BAK" + BakN]).length > 0) chrome.storage.local.set({"windows": storage["windows_BAK" + BakN]});
+                                if (Object.keys(storage["tabs_BAK" + BakN]).length > 0) {
+                                    chrome.storage.local.set({"tabs": storage["tabs_BAK" + BakN]});
+                                    alert("Loaded backup");
+                                }
+                                chrome.runtime.sendMessage({command: "reload"});
+                                chrome.runtime.sendMessage({command: "reload_sidebar"});
+                                location.reload();
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

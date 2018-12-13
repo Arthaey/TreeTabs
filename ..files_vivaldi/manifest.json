@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"default_locale": "en",
 	"background": {
-		"scripts": [ "listeners_bg.js", "scripts/common.js", "background.js" ],
+		"scripts": [ "global.js", "./scripts/preferences.js", "background_firefox.js", "background_opera.js", "background_vivaldi.js", "background.js" ],
 		"persistent": true
 	},
 	"name": "Tree Tabs",
@@ -16,7 +16,7 @@
 	},
 	"permissions": [ "tabs", "sessions", "<all_urls>", "storage", "unlimitedStorage", "bookmarks" ],
 	"options_ui": {
-		"page": "options.html",
+		"page": "options/options.html",
 		"open_in_tab": false
 	},
 	"commands": {
@@ -25,5 +25,5 @@
 			"description": "close tree"
 		}
 	},
-	"version": "1.7.2"
+	"version": "1.8.6"
 }
