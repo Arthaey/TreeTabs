@@ -364,6 +364,14 @@ class Tabs_ttTab {
                         let TryCases = [tab.favIconUrl, CachedFavicon, "./theme/icon_empty.svg"];
                         Tabs_LoadFavicon(tab.id, Img, TryCases, tHeader, 0);
                     }
+                    if (tab.cookieStoreId != "firefox-default") { // Check if tab belongs to a container
+                      try {
+                        let container = await browser.contextualIdentities.get(tab.cookieStoreId);
+                        tHeader.style["border-left"] = "3px solid " + container.colorCode;
+                      } catch(e) {
+                        this.warnUser(e);
+                      }
+                    }
                     if (tab.status == "loading" && tab.discarded == false) {
                         title = tab.title ? tab.title : labels.loading;
                         t.classList.add("loading");
