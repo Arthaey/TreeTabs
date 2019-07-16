@@ -575,20 +575,15 @@ function Tabs_Detach(Nodes, NodesTypes, Group) {
     });
 }
 
-function Tabs_DiscardTabs(tabsIds) {
-    let delay = 100;
-    let tabNode = document.getElementById(tabsIds[0]);
-    if (tabNode == null || tabNode.classList.contains("discarded") || tabNode.classList.contains("active_tab")) {
-        delay = 5;
-    } else {
-        chrome.tabs.discard(tabsIds[0]);
+function Tabs_DiscardTabs(tabsIds, hideTabsToo) {
+    let hidePromise = Promise.resolve();
+    if (hideTabsToo) {
+        hidePromise = browser.tabs.hide(tabsIds);
     }
-    tabsIds.splice(0, 1);
-    if (tabsIds.length > 0) {
-        setTimeout(function() {
-            Tabs_DiscardTabs(tabsIds);
-        }, delay);
-    }
+
+    hidePromise.then(() => {
+        browser.tabs.discard(tabsIds);
+    });
 }
 
 function Tabs_FindTab(input) { // find and select tabs
