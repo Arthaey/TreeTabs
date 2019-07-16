@@ -85,70 +85,15 @@ class Menu_ttMenu {
                 chrome.tabs.reload(parseInt(tt.menuItemNode.id));
             }
         }}}
+
+
         if (this.id == "menu_unload") { this.Menu.onmousedown = function(event) { if (event.which == 1) {
-            if (tt.menuItemNode.classList.contains("pin") || tt.menuItemNode.classList.contains("tab")) {
-                if (tt.menuItemNode.classList.contains("selected")) {
-                    let tabsArr = [];
-                    let query = document.querySelectorAll(".pin.selected, [id='" + tt.active_group + "'] .selected");
-                    for (let s of query) {
-                        tabsArr.push(parseInt(s.id));
-                        let children = document.querySelectorAll("[id='" + s.id + "'] .tab");
-                        if (children.length > 0) {
-                            for (let t of children) {
-                                tabsArr.push(parseInt(t.id));
-                            }
-                        }
-                    }
-                    Tabs_DiscardTabs(tabsArr);
-                } else {
-                    Tabs_DiscardTabs([parseInt(tt.menuItemNode.id)]);
-                }
-            }
-            if (tt.menuItemNode.classList.contains("folder")) {
-                let tabsArr = [];
-                let query = document.querySelectorAll("[id='"+ tt.menuItemNode.id + "'] .tab");
-                for (let s of query) {
-                    tabsArr.push(parseInt(s.id));
-                }
-                Tabs_DiscardTabs(tabsArr);
-            }
+            Menu_Unload({ unloadTree: false, hideTabsToo: true });
         }}}
         if (this.id == "menu_unload_tree") { this.Menu.onmousedown = function(event) { if (event.which == 1) {
-            if (tt.menuItemNode.classList.contains("pin") || tt.menuItemNode.classList.contains("tab")) {
-                if (tt.menuItemNode.classList.contains("selected")) {
-                    let tabsArr = [];
-                    let query = document.querySelectorAll(".pin.selected, [id='" + tt.active_group + "'] .selected");
-                    for (let s of query) {
-                        tabsArr.push(parseInt(s.id));
-                        let children = document.querySelectorAll("[id='" + s.id + "'] .tab");
-                        if (children.length > 0) {
-                            for (let t of children) {
-                                tabsArr.push(parseInt(t.id));
-                            }
-                        }
-                    }
-                    Tabs_DiscardTabs(tabsArr);
-                } else {
-                    let tabsArr = [];
-                    tabsArr.push(parseInt(tt.menuItemNode.id));
-                    let children = document.querySelectorAll("[id='" + tt.menuItemNode.id + "'] .tab");
-                    if (children.length > 0) {
-                        for (let t of children) {
-                            tabsArr.push(parseInt(t.id));
-                        }
-                    }
-                    Tabs_DiscardTabs(tabsArr);
-                }
-            }
-            if (tt.menuItemNode.classList.contains("folder")) {
-                let tabsArr = [];
-                let query = document.querySelectorAll("[id='" + tt.menuItemNode.id + "'] .tab");
-                for (let s of query) {
-                    tabsArr.push(parseInt(s.id));
-                }
-                Tabs_DiscardTabs(tabsArr);
-            }
+            Menu_Unload({ unloadTree: true, hideTabsToo: true });
         }}}
+
         if (this.id == "menu_close") { this.Menu.onmousedown = function(event) { if (event.which == 1) {
             if (tt.menuItemNode.classList.contains("selected")) {
                 let tabsArr = [];
@@ -345,12 +290,7 @@ class Menu_ttMenu {
             Groups_GroupRemove(tt.menuItemNode.id, true);
         }}}
         if (this.id == "menu_groups_unload") { this.Menu.onmousedown = function(event) { if (event.which == 1) {
-            let tabsArr = [];
-            let query = document.querySelectorAll("[id='" + tt.menuItemNode.id + "'] .tab");
-            for (let s of query) {
-                tabsArr.push(parseInt(s.id));
-            }
-            Tabs_DiscardTabs(tabsArr);
+            Menu_Unload({ unloadTree: true, hideTabsToo: true });
         }}}
         if (this.id == "menu_group_tabs_close") { this.Menu.onmousedown = function(event) { if (event.which == 1) {
             let tabsArr = [];
@@ -493,4 +433,49 @@ function Menu_CreateMenu() {
     for (let MenuItem of DefaultMenu.all_entries) {
         tt.menu[MenuItem[1]] = new Menu_ttMenu(MenuItem);
     }
+}
+
+function Menu_Unload(options = {}) {
+    if (options.unloadTree === undefined)  options.unloadTree  = false;
+    if (options.hideTabsToo === undefined) options.hideTabsToo = false;
+
+    let tabs = [tt.menuItemNode];
+    let getTabIdsOptions = { includeParent: true, includeChildren: false };
+
+    if (tt.menuItemNode.classList.contains("pin") || tt.menuItemNode.classList.contains("tab")) {
+        if (tt.menuItemNode.classList.contains("selected")) {
+            tabs = document.querySelectorAll(".pin.selected, [id='" + tt.active_group + "'] .selected");
+            getTabIdsOptions = { includeParent: true, includeChildren: true };
+        } else {
+            getTabIdsOptions = { includeParent: true, includeChildren: options.unloadTree };
+        }
+    }
+    if (tt.menuItemNode.classList.contains("folder")) {
+        getTabIdsOptions = { includeParent: false, includeChildren: true };
+    }
+
+    const tabsArr = Menu_GetTabIds(tabs, getTabIdsOptions);
+    Tabs_DiscardTabs(tabsArr, options.hideTabsToo);
+}
+
+function Menu_GetTabIds(tabNodes, options = {}) {
+    if (options.includeParent === undefined)   options.includeParent   = true;
+    if (options.includeChildren === undefined) options.includeChildren = false;
+
+    const tabsArr = [];
+
+    for (let tabNode of tabNodes) {
+        if (options.includeParent) {
+            tabsArr.push(parseInt(tabNode.id, 10));
+        }
+
+        if (options.includeChildren) {
+            const children = document.querySelectorAll("[id='" + tabNode.id + "'] .tab");
+            for (let child of children) {
+                tabsArr.push(parseInt(child.id, 10));
+            }
+        }
+    }
+
+    return tabsArr;
 }
